@@ -297,8 +297,10 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
     </div>
     <div class="sobreaviso-box">
       <div class="special-label" style="color:var(--blue)">📡 Sobre Aviso <span style="font-size:.7rem;font-weight:400;text-transform:none;letter-spacing:0">(pode ser mais de um)</span></div>
-      <div id="sobreaviso-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"></div>
-      <div style="font-size:.74rem;color:var(--muted)">Marque todos os motoristas em sobre aviso.</div>
+      <div id="sobreaviso-chips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:32px;margin-bottom:8px"></div>
+      <select id="sel-sobreaviso-add" style="width:100%" onchange="addSobreAviso(this.value);this.value=''">
+        <option value="">+ Adicionar motorista de sobre aviso…</option>
+      </select>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
@@ -815,8 +817,13 @@ function renderDashboard(){
       <div class="mot-rotas-count">${totalRotas} dias trabalhados</div>
     </div>`;
   });
-  // Em rota hoje
-  if(motEmEscala.size){
+  // Em rota hoje (rota + soro + socorro)
+  const motEmAtividade=new Set([
+    ...escalasHoje.filter(e=>e.papel==='rota').map(e=>e.motorista_id),
+    ...(sp.soro?[sp.soro]:[]),
+    ...(sp.socorro?[sp.socorro]:[])
+  ]);
+  if(motEmAtividade.size){
     gridHtml+=`<div style="grid-column:1/-1;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding-top:12px;border-top:1px solid var(--border)">Em Rota Hoje</div>`;
     escalasHoje.filter(e=>e.papel==='rota').forEach(e=>{
       const m=mots.find(x=>x.id===e.motorista_id);
@@ -829,6 +836,24 @@ function renderDashboard(){
         <div class="mot-badge-area"><span class="b bn">🚛 ${r?r.nome:'—'}</span></div>
       </div>`;
     });
+    if(sp.soro){
+      const m=mots.find(x=>x.id===sp.soro);
+      if(m) gridHtml+=`<div class="mot-card" style="border-color:var(--green)">
+        <div class="mot-status-bar" style="background:var(--green)"></div>
+        <div class="mot-nome">${nomeV(m)}</div>
+        <div class="mot-tipo">${m.tipo==='Próprio'?'Colaborador':m.tipo}</div>
+        <div class="mot-badge-area"><span class="b bg">🥛 Levar Soro</span></div>
+      </div>`;
+    }
+    if(sp.socorro){
+      const m=mots.find(x=>x.id===sp.socorro);
+      if(m) gridHtml+=`<div class="mot-card" style="border-color:var(--red)">
+        <div class="mot-status-bar" style="background:var(--red)"></div>
+        <div class="mot-nome">${nomeV(m)}</div>
+        <div class="mot-tipo">${m.tipo==='Próprio'?'Colaborador':m.tipo}</div>
+        <div class="mot-badge-area"><span class="b br">🆘 Socorro</span></div>
+      </div>`;
+    }
   }
   // Indisponíveis
   const indispon=mots.filter(m=>{
@@ -892,6 +917,14 @@ function renderEscala(){
   document.getElementById('escala-date').value=dt;
   document.getElementById('escala-date-label').textContent=fmtDate(dt);
 
+  // Se dados ainda não carregaram, aguarda
+  const mots=DB.get('motoristas');
+  if(!mots||!mots.length){
+    document.getElementById('escala-body').innerHTML='<div class="empty">⏳ Carregando dados...</div>';
+    setTimeout(renderEscala, 800);
+    return;
+  }
+
   const disp=motDisp(dt);
   const escalas=DB.get('escalas').filter(e=>e.data===dt);
   const mots=DB.get('motoristas');
@@ -905,21 +938,9 @@ function renderEscala(){
     return o;
   };
   document.getElementById('sel-plantao').innerHTML=mSel(sp.plantao);
-  // Sobre aviso: checkboxes múltiplos
-  const saChecks=document.getElementById('sobreaviso-chips');
-  saChecks.innerHTML=[...disp].sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).map(m=>`
-    <label style="display:inline-flex;align-items:center;gap:5px;background:${sp.sobreaviso.includes(m.id)?'#dbeafe':'#f0f5ff'};border:1px solid ${sp.sobreaviso.includes(m.id)?'var(--blue)':'var(--border)'};border-radius:20px;padding:4px 10px;cursor:pointer;font-size:.78rem;font-weight:500;transition:.15s">
-      <input type="checkbox" value="${m.id}" ${sp.sobreaviso.includes(m.id)?'checked':''} onchange="salvarSpecial()" style="width:14px;height:14px;cursor:pointer">
-      ${nomeV(m)}
-    </label>`).join('');
-  // Populate sel-sobreaviso-add
-  const saAddSel=document.getElementById('sel-sobreaviso-add');
-  if(saAddSel){
-    saAddSel.innerHTML='<option value="">+ Adicionar motorista de sobre aviso</option>';
-    [...disp].sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'))
-      .filter(m=>!sp.sobreaviso.includes(m.id))
-      .forEach(m=>saAddSel.innerHTML+=`<option value="${m.id}">${nomeV(m)}</option>`);
-  }
+  // Sobre aviso: chips + select para adicionar
+  _sobreAvisoIds=[...sp.sobreaviso];
+  renderSobreAvisoChips(_sobreAvisoIds, disp);
   document.getElementById('sel-soro').innerHTML=mSel(sp.soro);
   document.getElementById('sel-socorro').innerHTML=mSel(sp.socorro);
 
@@ -1006,25 +1027,21 @@ async function setVeicPrinc(motId,veiId){
 async function salvarSpecial(){
   const dt=document.getElementById('escala-date').value||today();
   const plantaoId =parseInt(document.getElementById('sel-plantao').value)||null;
-  // Sobre aviso: múltiplos checkboxes
-  const sobreIds=[...document.querySelectorAll('#sobreaviso-checks input:checked')].map(x=>parseInt(x.value));
   const soroId    =parseInt(document.getElementById('sel-soro').value)||null;
   const socorroId =parseInt(document.getElementById('sel-socorro').value)||null;
-  const papeis=['plantao','sobreaviso','soro','socorro'];
+  const papeis=['plantao','soro','socorro'];
   try{
-    await supa('escalas','DELETE',null,`?data=eq.${dt}&papel=in.(plantao,sobreaviso,soro,socorro)`);
+    await supa('escalas','DELETE',null,`?data=eq.${dt}&papel=in.(plantao,soro,socorro)`);
     let escalas=DB.get('escalas').filter(e=>!(e.data===dt&&papeis.includes(e.papel)));
-    const adicionar=async(motId,papel)=>{
+    const add=async(motId,papel)=>{
       if(!motId)return;
       const r=await syncEscala({data:dt,rota_id:null,motorista_id:motId,veiculo_id:null,papel},true);
       if(r)escalas.push(r);
     };
-    await adicionar(plantaoId,'plantao');
-    for(const sid of sobreIds) await adicionar(sid,'sobreaviso');
-    await adicionar(soroId,'soro');
-    await adicionar(socorroId,'socorro');
+    await add(plantaoId,'plantao');
+    await add(soroId,'soro');
+    await add(socorroId,'socorro');
     DB.set('escalas',escalas);
-    // Rerender checkboxes to update visual state
     renderEscala();
   }catch(e){showToast('Erro ao salvar campos especiais.','danger');}
 }
