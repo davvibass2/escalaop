@@ -925,9 +925,10 @@ function renderEscala(){
     return;
   }
 
-  const disp=motDisp(dt);
+  // Mostrar todos os motoristas ativos na escala
+  const todosAtivos=mots.filter(m=>m.status==='Ativo').sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'));
+  const disp=todosAtivos.length ? todosAtivos : mots.sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'));
   const escalas=DB.get('escalas').filter(e=>e.data===dt);
-  const mots=DB.get('motoristas');
   const rotas=DB.get('rotas');
 
   // Preencher plantão / sobre aviso / soro / socorro
@@ -937,12 +938,20 @@ function renderEscala(){
     [...disp].sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).forEach(m=>o+=`<option value="${m.id}" ${m.id===id?'selected':''}>${nomeV(m)}</option>`);
     return o;
   };
+  // Preencher plantão / sobre aviso / soro / socorro SEM disparar onchange
+  const setSelect=(id,val)=>{
+    const el=document.getElementById(id);
+    if(el) el.value=val||'';
+  };
   document.getElementById('sel-plantao').innerHTML=mSel(sp.plantao);
+  setSelect('sel-plantao', sp.plantao);
   // Sobre aviso: chips + select para adicionar
   _sobreAvisoIds=[...sp.sobreaviso];
   renderSobreAvisoChips(_sobreAvisoIds, disp);
   document.getElementById('sel-soro').innerHTML=mSel(sp.soro);
+  setSelect('sel-soro', sp.soro);
   document.getElementById('sel-socorro').innerHTML=mSel(sp.socorro);
+  setSelect('sel-socorro', sp.socorro);
 
   // Montar linhas por motorista
   // Todos os motores disponíveis aparecem, com suas rotas já atribuídas
@@ -1026,6 +1035,9 @@ async function setVeicPrinc(motId,veiId){
 
 async function salvarSpecial(){
   const dt=document.getElementById('escala-date').value||today();
+  if(!dt) return;
+  const mots=DB.get('motoristas');
+  if(!mots||!mots.length) return; // dados ainda não carregaram
   const plantaoId =parseInt(document.getElementById('sel-plantao').value)||null;
   const soroId    =parseInt(document.getElementById('sel-soro').value)||null;
   const socorroId =parseInt(document.getElementById('sel-socorro').value)||null;
@@ -1042,8 +1054,10 @@ async function salvarSpecial(){
     await add(soroId,'soro');
     await add(socorroId,'socorro');
     DB.set('escalas',escalas);
-    renderEscala();
-  }catch(e){showToast('Erro ao salvar campos especiais.','danger');}
+  }catch(e){
+    console.error('salvarSpecial error:',e);
+    showToast('Erro ao salvar. Tente novamente.','danger');
+  }
 }
 
 let _atribDt=null;
