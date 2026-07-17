@@ -601,7 +601,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 // SUPABASE CONFIG
 // ══════════════════════════════════════════
 const SUPA_URL = 'https://medrenwmixzsghvbevgy.supabase.co';
-const SUPA_KEY = 'sb_publishable_kzKEIMpDC6Kix3olraETTA_1JdI4LKC';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZHJlbndtaXh6c2dodmJldmd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NDIxNTIsImV4cCI6MjA5ODAxODE1Mn0.OOLKyJ6G7nkqfCivEHb7pgdE7Z96eBQAZNMcrFWxy4E';
 
 async function supa(table, method='GET', body=null, extra=''){
   const res = await fetch(`${SUPA_URL}/rest/v1/${table}${extra}`, {
@@ -684,9 +684,7 @@ function rotasParaDt(dt){
 function veiculosAtivos(){return DB.get('veiculos').filter(v=>v.status==='ativo')}
 
 // escala do dia do motorista
-function getEscDia(motId,dt){
-  return DB.get('escalas').filter(e=>e.data===dt&&e.motorista_id===motId);
-}
+// getEscDia removida (não utilizada)
 function getSpecial(dt){
   const escs=DB.get('escalas').filter(e=>e.data===dt);
   const p=escs.find(e=>e.papel==='plantao');
@@ -704,7 +702,7 @@ function getSpecial(dt){
 // ══════════ NAVEGAÇÃO ══════════
 function goPage(p,btn,source){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
-  document.getElementById('page-'+p).classList.add('active');
+  const pageEl=document.getElementById('page-'+p); if(pageEl) pageEl.classList.add('active');
   // Sync header nav
   document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
   if(btn&&source!=='bnav') btn.classList.add('active');
@@ -717,10 +715,10 @@ function goPage(p,btn,source){
   if(p==='escala'){if(!document.getElementById('escala-date').value)document.getElementById('escala-date').value=today();renderEscala();}
   if(p==='previsao')renderPrevisao();
   if(p==='cadastros')renderCadastros();
-  if(p==='relatorios')document.querySelectorAll('#rel-tabs .sub-tab')[0].click();
+  if(p==='relatorios'){const t=document.querySelectorAll('#rel-tabs .sub-tab')[0];if(t)t.click();}
 }
 function cadTab(tab,btn){
-  ['motoristas','veiculos','rotas','produtores','folgas'].forEach(t=>document.getElementById('cad-'+t).style.display=t===tab?'':'none');
+  ['motoristas','veiculos','rotas','produtores','folgas'].forEach(t=>{const el=document.getElementById('cad-'+t);if(el)el.style.display=t===tab?'':'none';});
   document.querySelectorAll('#cad-tabs .sub-tab').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   if(tab==='motoristas')renderMotoristas();
@@ -730,7 +728,7 @@ function cadTab(tab,btn){
   if(tab==='folgas')renderFolgas();
 }
 function relTab(tab,btn){
-  ['rel1','rel2','rel3','rel4','rel5','rel6'].forEach(t=>document.getElementById(t).style.display=t===tab?'':'none');
+  ['rel1','rel2','rel3','rel4','rel5','rel6'].forEach(t=>{const el=document.getElementById(t);if(el)el.style.display=t===tab?'':'none';});
   document.querySelectorAll('#rel-tabs .sub-tab').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   if(tab==='rel1')renderRel1();if(tab==='rel2')renderRel2();
@@ -742,7 +740,7 @@ function relTab(tab,btn){
 function openModal(id){
   document.getElementById(id).classList.add('open');
 }
-function closeModal(id){document.getElementById(id).classList.remove('open')}
+function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('open');}
 document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open')}));
 
 // ══════════ DASHBOARD ══════════
@@ -792,7 +790,7 @@ function renderDashboard(){
     if(m) gridHtml+=`<div class="mot-card plantao">
       <div class="mot-status-bar" style="background:var(--amber)"></div>
       <div class="mot-nome">${nomeV(m)}</div>
-      <div class="mot-tipo">${m.tipo==='Próprio'?'Colaborador':m.tipo}</div>
+      <div class="mot-tipo">${tipoV(m)}</div>
       <div class="mot-badge-area"><span class="b ba">⚡ Plantão</span></div>
     </div>`;
   }
@@ -802,7 +800,7 @@ function renderDashboard(){
     if(m) gridHtml+=`<div class="mot-card sobreaviso">
       <div class="mot-status-bar" style="background:var(--blue)"></div>
       <div class="mot-nome">${nomeV(m)}</div>
-      <div class="mot-tipo">${m.tipo==='Próprio'?'Colaborador':m.tipo}</div>
+      <div class="mot-tipo">${tipoV(m)}</div>
       <div class="mot-badge-area"><span class="b bbl">📡 Sobre Aviso</span></div>
     </div>`;
   });
@@ -812,7 +810,7 @@ function renderDashboard(){
     gridHtml+=`<div class="mot-card disponivel">
       <div class="mot-status-bar" style="background:var(--green)"></div>
       <div class="mot-nome">${nomeV(m)}</div>
-      <div class="mot-tipo">${m.tipo==='Próprio'?'Colaborador':m.tipo}</div>
+      <div class="mot-tipo">${tipoV(m)}</div>
       <div class="mot-badge-area"><span class="b bg">🟢 Livre</span></div>
       <div class="mot-rotas-count">${totalRotas} dias trabalhados</div>
     </div>`;
@@ -832,7 +830,7 @@ function renderDashboard(){
       gridHtml+=`<div class="mot-card" style="border-color:var(--navy)">
         <div class="mot-status-bar" style="background:var(--navy)"></div>
         <div class="mot-nome">${nomeV(m)}</div>
-        <div class="mot-tipo">${m.tipo==='Próprio'?'Colaborador':m.tipo}</div>
+        <div class="mot-tipo">${tipoV(m)}</div>
         <div class="mot-badge-area"><span class="b bn">🚛 ${r?r.nome:'—'}</span></div>
       </div>`;
     });
@@ -841,7 +839,7 @@ function renderDashboard(){
       if(m) gridHtml+=`<div class="mot-card" style="border-color:var(--green)">
         <div class="mot-status-bar" style="background:var(--green)"></div>
         <div class="mot-nome">${nomeV(m)}</div>
-        <div class="mot-tipo">${m.tipo==='Próprio'?'Colaborador':m.tipo}</div>
+        <div class="mot-tipo">${tipoV(m)}</div>
         <div class="mot-badge-area"><span class="b bg">🥛 Levar Soro</span></div>
       </div>`;
     }
@@ -850,7 +848,7 @@ function renderDashboard(){
       if(m) gridHtml+=`<div class="mot-card" style="border-color:var(--red)">
         <div class="mot-status-bar" style="background:var(--red)"></div>
         <div class="mot-nome">${nomeV(m)}</div>
-        <div class="mot-tipo">${m.tipo==='Próprio'?'Colaborador':m.tipo}</div>
+        <div class="mot-tipo">${tipoV(m)}</div>
         <div class="mot-badge-area"><span class="b br">🆘 Socorro</span></div>
       </div>`;
     }
@@ -867,7 +865,7 @@ function renderDashboard(){
       gridHtml+=`<div class="mot-card indisponivel">
         <div class="mot-status-bar" style="background:var(--red)"></div>
         <div class="mot-nome">${nomeV(m)}</div>
-        <div class="mot-tipo">${m.tipo==='Próprio'?'Colaborador':m.tipo}</div>
+        <div class="mot-tipo">${tipoV(m)}</div>
         <div class="mot-badge-area"><span class="b br">🔴 ${lbl}</span></div>
       </div>`;
     });
@@ -926,8 +924,9 @@ function renderEscala(){
   }
 
   // Mostrar todos os motoristas ativos na escala
-  const todosAtivos=mots.filter(m=>m.status==='Ativo').sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'));
-  const disp=todosAtivos.length ? todosAtivos : mots.sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'));
+  const todosAtivos=mots.filter(m=>m.status==='Ativo'||m.status==='ativo');
+  const disp=(todosAtivos.length?todosAtivos:mots).sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'));
+
   const escalas=DB.get('escalas').filter(e=>e.data===dt);
   const rotas=DB.get('rotas');
 
@@ -939,19 +938,26 @@ function renderEscala(){
     return o;
   };
   // Preencher plantão / sobre aviso / soro / socorro SEM disparar onchange
-  const setSelect=(id,val)=>{
-    const el=document.getElementById(id);
-    if(el) el.value=val||'';
-  };
-  document.getElementById('sel-plantao').innerHTML=mSel(sp.plantao);
-  setSelect('sel-plantao', sp.plantao);
+  // Guard: só preenche se os elementos existirem no DOM
+  const selPlantao=document.getElementById('sel-plantao');
+  const selSoro=document.getElementById('sel-soro');
+  const selSocorro=document.getElementById('sel-socorro');
+
+  if(selPlantao){
+    selPlantao.innerHTML=mSel(sp.plantao);
+    selPlantao.value=sp.plantao||'';
+  }
   // Sobre aviso: chips + select para adicionar
   _sobreAvisoIds=[...sp.sobreaviso];
-  renderSobreAvisoChips(_sobreAvisoIds, disp);
-  document.getElementById('sel-soro').innerHTML=mSel(sp.soro);
-  setSelect('sel-soro', sp.soro);
-  document.getElementById('sel-socorro').innerHTML=mSel(sp.socorro);
-  setSelect('sel-socorro', sp.socorro);
+  if(document.getElementById('sobreaviso-chips')) renderSobreAvisoChips(_sobreAvisoIds, disp);
+  if(selSoro){
+    selSoro.innerHTML=mSel(sp.soro);
+    selSoro.value=sp.soro||'';
+  }
+  if(selSocorro){
+    selSocorro.innerHTML=mSel(sp.socorro);
+    selSocorro.value=sp.socorro||'';
+  }
 
   // Montar linhas por motorista
   // Todos os motores disponíveis aparecem, com suas rotas já atribuídas
@@ -988,7 +994,8 @@ function renderEscala(){
     const addBtn=`<span class="rota-chip add-btn" onclick="openAtrib(${m.id})" title="Atribuir rota">+ Rota</span>`;
 
     const totalRot=countTotalDias(m.id);
-    const isPlantao=sp.plantao===m.id, isSobreaviso=sp.sobreaviso===m.id;
+    const isPlantao=sp.plantao===m.id;
+    const isSobreaviso=Array.isArray(sp.sobreaviso)?sp.sobreaviso.includes(m.id):sp.sobreaviso===m.id;
 
     html+=`<div class="esc-mot-row">
       <div>
@@ -1054,6 +1061,18 @@ async function salvarSpecial(){
     await add(soroId,'soro');
     await add(socorroId,'socorro');
     DB.set('escalas',escalas);
+    // Atualizar apenas os selects sem rerender tudo (evita loop)
+    const dtAtual=document.getElementById('escala-date').value||today();
+    const spAtual=getSpecial(dtAtual);
+    const dispAtual=motDisp(dtAtual);
+    const mSel2=id=>{
+      let o='<option value="">— Selecionar —</option>';
+      [...dispAtual].sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).forEach(m=>o+=`<option value="${m.id}" ${m.id===id?'selected':''}>${nomeV(m)}</option>`);
+      return o;
+    };
+    document.getElementById('sel-plantao').innerHTML=mSel2(spAtual.plantao);
+    document.getElementById('sel-soro').innerHTML=mSel2(spAtual.soro);
+    document.getElementById('sel-socorro').innerHTML=mSel2(spAtual.socorro);
   }catch(e){
     console.error('salvarSpecial error:',e);
     showToast('Erro ao salvar. Tente novamente.','danger');
@@ -1083,18 +1102,16 @@ function openAtrib(motId){
   if(previstas.length){
     selR.innerHTML+='<optgroup label="── Previstas para hoje ──">';
     previstas.forEach(r=>{
-      const cnt=countRM(motId,r.id);
-      const exp=cnt===0?'Nunca fez':cnt<=2?'Em treinamento':cnt<=10?'Conhece':'Especialista';
-      selR.innerHTML+=`<option value="${r.id}">${r.nome} — ${exp}</option>`;
+      const expTxt=(c=>c===0?'Nunca fez':c<=2?'Em treinamento':c<=10?'Conhece':'Especialista')(countRM(motId,r.id));
+      selR.innerHTML+=`<option value="${r.id}">${r.nome} — ${expTxt}</option>`;
     });
     selR.innerHTML+='</optgroup>';
   }
   if(outras.length){
     selR.innerHTML+='<optgroup label="── Outras rotas ──">';
     outras.forEach(r=>{
-      const cnt=countRM(motId,r.id);
-      const exp=cnt===0?'Nunca fez':cnt<=2?'Em treinamento':cnt<=10?'Conhece':'Especialista';
-      selR.innerHTML+=`<option value="${r.id}">${r.nome} — ${exp}</option>`;
+      const expTxt=(c=>c===0?'Nunca fez':c<=2?'Em treinamento':c<=10?'Conhece':'Especialista')(countRM(motId,r.id));
+      selR.innerHTML+=`<option value="${r.id}">${r.nome} — ${expTxt}</option>`;
     });
     selR.innerHTML+='</optgroup>';
   }
@@ -1454,6 +1471,15 @@ function renderCadastros(){renderMotoristas();}
 
 // Nome visível na escala: apelido se existir, senão primeiro nome
 function nomeV(m){ return (m.apelido&&m.apelido.trim())?m.apelido.trim():m.nome.split(' ')[0]; }
+// Tipo normalizado para exibição
+function tipoV(m){ return (m.tipo==='Próprio'||m.tipo==='Colaborador')?'Colaborador':'Agregado'; }
+// Badge HTML de tipo
+function tipoBadge(m){ return tipoV(m)==='Colaborador'?'<span class="b bn">Colaborador</span>':'<span class="b bz">Agregado</span>'; }
+// Badge HTML de status
+function statusBadge(m){ 
+  const c=m.status==='Ativo'?'bg':m.status==='Férias'?'by':'br';
+  return `<span class="b ${c}">${m.status}</span>`;
+}
 
 function preencherMotFixoSelect(selId){
   const sel=document.getElementById('rot-mot-fixo');
@@ -1495,7 +1521,7 @@ function editMot(id){
   document.getElementById('mot-nome').value=m.nome;
   document.getElementById('mot-apelido').value=m.apelido||'';
   document.getElementById('mot-cnh').value=m.cnh||'D';
-  document.getElementById('mot-tipo').value=m.tipo==='Próprio'?'Colaborador':m.tipo;
+  document.getElementById('mot-tipo').value=tipoV(m);
   document.getElementById('mot-cnh').value=m.cnh||'D';
   document.getElementById('mot-status').value=m.status;
   document.getElementById('mot-admissao').value=m.admissao||'';
@@ -1732,7 +1758,7 @@ function renderFolgas(){
 }
 function openFolgaModal(id){
   setupFolgaModal(id||null);
-  document.getElementById('modal-folga').classList.add('open');
+  const mf=document.getElementById('modal-folga');if(mf)mf.classList.add('open');
 }
 async function saveFolga(){
   const id=document.getElementById('folga-id').value;
@@ -1797,8 +1823,8 @@ function renderRel1(){
     <div class="tw"><table>
       <thead><tr><th>#</th><th>Motorista</th><th>Tipo</th><th>Status</th><th>Rotas que Conhece</th><th>Nível</th></tr></thead>
       <tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.nome}</b></td>
-        <td>${r.tipo==='Agregado'?'<span class="b bz">Agregado</span>':'<span class="b bn">Colaborador</span>'}</td>
-        <td><span class="b ${r.status==='Ativo'?'bg':r.status==='Férias'?'by':'br'}">${r.status}</span></td>
+        <td>${tipoBadge(r.m)}</td>
+        <td>${statusBadge(r.m)}</td>
         <td><b>${r.total}</b> / ${rotas.length}</td>
         <td>${r.total>=rotas.length*.7?'<span class="exp expert">Polivalente</span>':r.total>=5?'<span class="exp knows">Versátil</span>':'<span class="exp train">Em desenv.</span>'}</td>
       </tr>`).join('')}</tbody>
@@ -1825,15 +1851,15 @@ function renderRel2(){
 function renderTrabalho(divId,asc){
   const titulo=asc?'Quem Menos Trabalhou':'Quem Mais Trabalhou';
   const mots=DB.get('motoristas'),escalas=DB.get('escalas');
-  const rows=mots.map(m=>({nome:nomeV(m),tipo:m.tipo,status:m.status,dias:new Set(escalas.filter(e=>e.motorista_id===m.id&&e.papel==='rota').map(e=>e.data)).size})).sort((a,b)=>asc?a.dias-b.dias:b.dias-a.dias);
+  const rows=mots.map(m=>({m,nome:nomeV(m),tipo:m.tipo,status:m.status,dias:new Set(escalas.filter(e=>e.motorista_id===m.id&&e.papel==='rota').map(e=>e.data)).size})).sort((a,b)=>asc?a.dias-b.dias:b.dias-a.dias);
   document.getElementById(divId).innerHTML=`<div style="display:flex;justify-content:flex-end;margin:12px 0 4px"><button class="btn btn-g btn-sm" onclick="printRel('${divId}','${titulo}')">🖨️ Imprimir</button></div>
   <div class="panel">
     <div class="ph"><div class="pt">📈 ${titulo}</div></div>
     <div class="tw"><table>
       <thead><tr><th>#</th><th>Motorista</th><th>Tipo</th><th>Status</th><th>Dias em Rota</th></tr></thead>
       <tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.nome}</b></td>
-        <td>${r.tipo==='Agregado'?'<span class="b bz">Agregado</span>':'<span class="b bn">Colaborador</span>'}</td>
-        <td><span class="b ${r.status==='Ativo'?'bg':r.status==='Férias'?'by':'br'}">${r.status}</span></td>
+        <td>${tipoBadge(r.m)}</td>
+        <td>${statusBadge(r.m)}</td>
         <td><b>${r.dias}</b> dias</td>
       </tr>`).join('')}</tbody>
     </table></div>
@@ -1919,7 +1945,7 @@ async function importarDados(input){
 
       // 2. Inserir motoristas
       if(dados.motoristas?.length){
-        const rows=dados.motoristas.map(m=>({
+        const rowsMots=dados.motoristas.map(m=>({
           id:m.id,
           nome:m.nome,
           apelido:m.apelido||'',
@@ -1928,46 +1954,46 @@ async function importarDados(input){
           admissao:m.admissao||null,
           obs:m.obs||''
         }));
-        await supa('motoristas','POST',rows);
+        await supa('motoristas','POST',rowsMots);
       }
 
       // 3. Inserir veículos
       if(dados.veiculos?.length){
-        const rows=dados.veiculos.map(v=>({id:v.id,frota:v.frota,placa:v.placa,modelo:v.modelo,status:v.status||'ativo',manut_obs:v.manutObs||v.manut_obs||''}));
-        await supa('veiculos','POST',rows);
+        const rowsVeis=dados.veiculos.map(v=>({id:v.id,frota:v.frota,placa:v.placa,modelo:v.modelo,status:v.status||'ativo',manut_obs:v.manutObs||v.manut_obs||''}));
+        await supa('veiculos','POST',rowsVeis);
       }
 
       // 4. Inserir rotas
       if(dados.rotas?.length){
-        const rows=dados.rotas.map(r=>({id:r.id,nome:r.nome,intervalo:r.intervalo||1,duracao:r.duracao||1,ativa:r.ativa??1,ultima:r.ultima||null}));
-        await supa('rotas','POST',rows);
+        const rowsRotas=dados.rotas.map(r=>({id:r.id,nome:r.nome,intervalo:r.intervalo||1,duracao:r.duracao||1,ativa:r.ativa??1,ultima:r.ultima||null}));
+        await supa('rotas','POST',rowsRotas);
       }
 
       // 5. Inserir produtores
       if(dados.produtores?.length){
-        const rows=dados.produtores.map(p=>({id:p.id,mat:p.mat,nome:p.nome,apelido:p.apelido||''}));
-        await supa('produtores','POST',rows);
+        const rowsProds=dados.produtores.map(p=>({id:p.id,mat:p.mat,nome:p.nome,apelido:p.apelido||''}));
+        await supa('produtores','POST',rowsProds);
       }
 
       // 6. Inserir rota_prod
       if(dados.rota_prod){
-        const rows=[];
+        const rowsRP=[];
         Object.entries(dados.rota_prod).forEach(([rotaId,prodIds])=>{
-          if(Array.isArray(prodIds)) prodIds.forEach(pid=>rows.push({rota_id:parseInt(rotaId),prod_id:pid}));
+          if(Array.isArray(prodIds)) prodIds.forEach(pid=>rowsRP.push({rota_id:parseInt(rotaId),prod_id:pid}));
         });
-        if(rows.length) await supa('rota_prod','POST',rows);
+        if(rowsRP.length) await supa('rota_prod','POST',rowsRP);
       }
 
       // 7. Inserir escalas
       if(dados.escalas?.length){
-        const rows=dados.escalas.map(e=>({id:e.id,data:e.data,rota_id:e.rota_id||null,motorista_id:e.motorista_id||null,veiculo_id:e.veiculo_id||null,papel:e.papel||'rota'}));
-        await supa('escalas','POST',rows);
+        const rowsEscs=dados.escalas.map(e=>({id:e.id,data:e.data,rota_id:e.rota_id||null,motorista_id:e.motorista_id||null,veiculo_id:e.veiculo_id||null,papel:e.papel||'rota'}));
+        await supa('escalas','POST',rowsEscs);
       }
 
       // 8. Inserir folgas
       if(dados.folgas?.length){
-        const rows=dados.folgas.map(f=>({id:f.id,motorista_id:f.motorista_id,tipo:f.tipo,inicio:f.inicio,fim:f.fim||null,motivo:f.motivo||''}));
-        await supa('folgas','POST',rows);
+        const rowsFolgas=dados.folgas.map(f=>({id:f.id,motorista_id:f.motorista_id,tipo:f.tipo,inicio:f.inicio,fim:f.fim||null,motivo:f.motivo||''}));
+        await supa('folgas','POST',rowsFolgas);
       }
 
       input.value='';
@@ -1997,7 +2023,8 @@ function showToast(msg,type='info'){
 async function carregarDados(){
   showLoading(true);
   try{
-    const [motoristas,veiculos,rotas,produtores,escalas,folgas,rota_prod_rows] = await Promise.all([
+    // Promise.allSettled garante que se uma tabela falhar, as outras ainda carregam
+    const resultados = await Promise.allSettled([
       supa('motoristas','GET',null,'?order=nome'),
       supa('veiculos','GET',null,'?order=frota'),
       supa('rotas','GET',null,'?order=nome'),
@@ -2006,6 +2033,19 @@ async function carregarDados(){
       supa('folgas','GET',null,'?order=id'),
       supa('rota_prod','GET',null,'?select=rota_id,prod_id'),
     ]);
+    const [r0,r1,r2,r3,r4,r5,r6] = resultados;
+    if(r0.status==='rejected') throw new Error('Falha ao carregar motoristas: '+r0.reason);
+    const motoristas = r0.value||[];
+    const veiculos   = r1.status==='fulfilled'?(r1.value||[]):[];
+    const rotas      = r2.status==='fulfilled'?(r2.value||[]):[];
+    const produtores = r3.status==='fulfilled'?(r3.value||[]):[];
+    const escalas    = r4.status==='fulfilled'?(r4.value||[]):[];
+    const folgas     = r5.status==='fulfilled'?(r5.value||[]):[];
+    const rota_prod_rows = r6.status==='fulfilled'?(r6.value||[]):[];
+    // Log de erros parciais
+    [r1,r2,r3,r4,r5,r6].forEach((r,i)=>{
+      if(r.status==='rejected') console.warn(`Tabela ${['veiculos','rotas','produtores','escalas','folgas','rota_prod'][i]} falhou:`,r.reason);
+    });
 
     // Normalizar campos do Supabase para o formato interno
     DB.set('motoristas', motoristas.map(m=>({
@@ -2037,7 +2077,7 @@ async function carregarDados(){
       ? 'Abra o arquivo em um servidor web, não direto do computador. Use o Chrome e arraste o arquivo para uma aba, ou use a extensão "Live Server" no VS Code.'
       : 'Erro ao conectar ao Supabase. Verifique sua conexão com a internet.';
     // Mostrar erro na tela em vez de só toast
-    document.getElementById('loading-screen').style.display='none';
+    // loading-overlay é criado dinamicamente pelo showLoading
     document.querySelector('main').innerHTML=`
       <div style="max-width:520px;margin:60px auto;padding:32px;background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.12);text-align:center">
         <div style="font-size:2.5rem;margin-bottom:16px">⚠️</div>
@@ -2105,7 +2145,7 @@ async function syncEscala(e, isNew){
   else { await supa('escalas','PATCH',payload,`?id=eq.${e.id}`); return e; }
 }
 async function deleteEscala(id){ await supa('escalas','DELETE',null,`?id=eq.${id}`); }
-async function deleteEscalasPorData(dt){ await supa('escalas','DELETE',null,`?data=eq.${dt}&papel=eq.rota`); }
+// deleteEscalasPorData removida (não utilizada)
 
 async function syncFolga(f, isNew){
   const payload={motorista_id:f.motorista_id,tipo:f.tipo,inicio:f.inicio,fim:f.fim||null,motivo:f.motivo||''};
