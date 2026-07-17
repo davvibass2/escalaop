@@ -917,6 +917,7 @@ function renderEscala(){
 
   // Se dados ainda não carregaram, aguarda
   const mots=DB.get('motoristas');
+  console.log('ESC1 mots=',mots?.length,'statuses=',[...new Set((mots||[]).map(m=>m?.status))]);
   if(!mots||!mots.length){
     document.getElementById('escala-body').innerHTML='<div class="empty">⏳ Carregando dados...</div>';
     setTimeout(renderEscala, 800);
@@ -925,7 +926,9 @@ function renderEscala(){
 
   // Mostrar todos os motoristas ativos na escala
   const todosAtivos=mots.filter(m=>m.status==='Ativo'||m.status==='ativo');
+  console.log('ESC2 ativos=',todosAtivos.length,'disp antes sort=',todosAtivos.length);
   const disp=(todosAtivos.length?todosAtivos:mots).sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'));
+  console.log('ESC3 disp final=',disp.length);
 
   const escalas=DB.get('escalas').filter(e=>e.data===dt);
   const rotas=DB.get('rotas');
@@ -1025,7 +1028,9 @@ function renderEscala(){
     </div>`;
   }
 
+  console.log('ESC4 html length=',html.length,'escala-body exists=',!!document.getElementById('escala-body'));
   document.getElementById('escala-body').innerHTML=html;
+  console.log('ESC5 done, rows rendered=',document.querySelectorAll('.esc-mot-row').length);
   renderHistorico(dt);
 }
 
