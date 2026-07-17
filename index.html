@@ -909,6 +909,57 @@ function countTotalDias(mId){
 // ══════════ ESCALA ══════════
 // linhas pendentes {motId: [{rota_id, veiculo_id}]}
 let escLinhas={};
+let _sobreAvisoIds=[];
+
+function renderSobreAvisoChips(ids, disp){
+  _sobreAvisoIds=[...ids];
+  const el=document.getElementById('sobreaviso-chips');
+  if(!el) return;
+  const mots=DB.get('motoristas');
+  el.innerHTML=_sobreAvisoIds.map(id=>{
+    const m=mots.find(x=>x.id===id);
+    if(!m) return '';
+    return`<span style="display:inline-flex;align-items:center;gap:6px;background:#dbeafe;border:1px solid var(--blue);border-radius:20px;padding:4px 12px;font-size:.78rem;font-weight:600;color:#1a4a8a">
+      ${nomeV(m)}
+      <button onclick="removeSobreAviso(${id})" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:.9rem;padding:0;line-height:1">✕</button>
+    </span>`;
+  }).join('');
+  const sel=document.getElementById('sel-sobreaviso-add');
+  if(sel){
+    sel.innerHTML='<option value="">+ Adicionar motorista de sobre aviso</option>';
+    [...(disp||DB.get('motoristas'))].sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'))
+      .filter(m=>!_sobreAvisoIds.includes(m.id))
+      .forEach(m=>sel.innerHTML+=`<option value="${m.id}">${nomeV(m)}</option>`);
+  }
+}
+
+async function addSobreAviso(motId){
+  if(!motId) return;
+  const id=parseInt(motId);
+  if(_sobreAvisoIds.includes(id)) return;
+  _sobreAvisoIds.push(id);
+  await _salvarSobreAviso();
+}
+
+async function removeSobreAviso(motId){
+  _sobreAvisoIds=_sobreAvisoIds.filter(x=>x!==motId);
+  await _salvarSobreAviso();
+}
+
+async function _salvarSobreAviso(){
+  const dt=document.getElementById('escala-date').value||today();
+  try{
+    await supa('escalas','DELETE',null,`?data=eq.${dt}&papel=eq.sobreaviso`);
+    let escalas=DB.get('escalas').filter(e=>!(e.data===dt&&e.papel==='sobreaviso'));
+    for(const id of _sobreAvisoIds){
+      const r=await syncEscala({data:dt,rota_id:null,motorista_id:id,veiculo_id:null,papel:'sobreaviso'},true);
+      if(r) escalas.push(r);
+    }
+    DB.set('escalas',escalas);
+    const disp=motDisp(dt);
+    renderSobreAvisoChips(_sobreAvisoIds, disp);
+  }catch(e){showToast('Erro ao salvar sobre aviso.','danger');}
+}
 
 function renderEscala(){
   const dt=document.getElementById('escala-date').value||today();
