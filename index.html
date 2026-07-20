@@ -113,7 +113,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 .fg select,.fg input,.fg textarea{width:100%}
 
 /* MODAL — sheet nativo no mobile */
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}.modal-bg.center{align-items:center}
 .modal-bg.open{display:flex}
 .modal{background:#fff;border-radius:20px 20px 0 0;padding:8px 18px 20px;padding-bottom:calc(20px + var(--safe-bottom));width:100%;max-width:560px;box-shadow:0 -4px 32px rgba(0,0,0,.2);max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .modal::before{content:'';display:block;width:36px;height:4px;background:#ddd;border-radius:2px;margin:8px auto 14px}
@@ -138,13 +138,13 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 .emergencia-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px}
 
 /* ESCALA */
-.esc-mot-row{display:grid;grid-template-columns:150px 1fr 1fr 72px;align-items:start;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)}
+.esc-mot-row{display:grid;grid-template-columns:110px 1fr 150px;align-items:center;gap:4px;padding:4px 8px;border-bottom:1px solid var(--border)}
 .esc-mot-row:last-child{border-bottom:none}
 .esc-head{background:var(--bg);font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);align-items:center}
-.mot-label{font-weight:600;font-size:.86rem}
+.mot-label{font-weight:600;font-size:.82rem}
 .mot-status-inline{font-size:.71rem;margin-top:2px}
 .rotas-do-dia{display:flex;flex-wrap:wrap;gap:4px}
-.rota-chip{background:#e8eef2;color:var(--navy);border-radius:6px;padding:5px 10px;font-size:.75rem;font-weight:500;display:flex;align-items:center;gap:4px;cursor:pointer;min-height:34px;touch-action:manipulation}
+.rota-chip{background:#e8eef2;color:var(--navy);border-radius:4px;padding:2px 7px;font-size:.73rem;font-weight:500;display:flex;align-items:center;gap:3px;cursor:pointer;touch-action:manipulation}
 .rota-chip.assigned{background:#d1e7dd;color:#0a5c36}
 .rota-chip.add-btn{background:var(--amber);color:#fff;border:none;cursor:pointer}
 .rota-chip.add-btn:active{opacity:.8}
@@ -156,11 +156,11 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 .special-select{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 
 /* PREVISÃO */
-.prev-head-cell{padding:8px 8px;border-right:1px solid var(--border);font-size:.72rem;font-weight:700;color:var(--muted);text-align:center;background:var(--bg)}
+.prev-head-cell{padding:5px 6px;border-right:1px solid var(--border);font-size:.71rem;font-weight:700;color:var(--muted);text-align:center;background:var(--bg)}
 .prev-head-cell.today{background:#fff8e6;color:var(--amber)}
-.prev-cell{padding:7px 8px;border-right:1px solid var(--border);font-size:.79rem;min-height:40px;display:flex;align-items:center}
+.prev-cell{padding:4px 6px;border-right:1px solid var(--border);font-size:.79rem;min-height:32px;display:flex;align-items:center}
 .prev-cell.today{background:#fffbf2}
-.day-event{font-size:.69rem;padding:2px 5px;border-radius:4px;margin:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.day-event{font-size:.69rem;padding:1px 5px;border-radius:4px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
 .de-rota{background:#d1e7dd;color:#0a5c36}
 .de-folga{background:#fdecea;color:#7a1a1a}
 .de-ferias{background:#fef8e7;color:#856404}
@@ -382,12 +382,15 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 
 <!-- ═══════ CADASTROS ═══════ -->
 <section class="page" id="page-cadastros">
-  <div class="sub-tabs" id="cad-tabs">
-    <button class="sub-tab active" onclick="cadTab('motoristas',this)">Motoristas</button>
-    <button class="sub-tab"        onclick="cadTab('veiculos',this)">Veículos</button>
-    <button class="sub-tab"        onclick="cadTab('rotas',this)">Rotas</button>
-    <button class="sub-tab"        onclick="cadTab('produtores',this)">Produtores</button>
-    <button class="sub-tab"        onclick="cadTab('folgas',this)">Folgas/Férias</button>
+  <div class="sub-tabs" id="cad-tabs" style="justify-content:space-between">
+    <div style="display:flex;gap:4px">
+      <button class="sub-tab active" onclick="cadTab('motoristas',this)">Motoristas</button>
+      <button class="sub-tab"        onclick="cadTab('veiculos',this)">Veículos</button>
+      <button class="sub-tab"        onclick="cadTab('rotas',this)">Rotas</button>
+      <button class="sub-tab"        onclick="cadTab('produtores',this)">Produtores</button>
+      <button class="sub-tab"        onclick="cadTab('folgas',this)">Folgas/Férias</button>
+    </div>
+    <button onclick="abrirAlterarSenha()" style="background:none;border:none;cursor:pointer;padding:8px 12px;font-size:.78rem;color:var(--muted);display:flex;align-items:center;gap:4px;margin-bottom:0;align-self:flex-end">🔑 Alterar Senha</button>
   </div>
   <div id="cad-motoristas"></div>
   <div id="cad-veiculos"   style="display:none"></div>
@@ -457,9 +460,23 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
     <div class="fg"><label>Placa</label><input type="text" id="vei-placa"></div>
   </div>
   <div class="fg"><label>Modelo</label><input type="text" id="vei-modelo"></div>
-  <div class="form-row">
-    <div class="fg"><label>Status</label><select id="vei-status"><option value="ativo">Ativo</option><option value="manutencao">Em Manutenção</option><option value="inativo">Inativo</option></select></div>
-    <div class="fg"><label>Obs. Manutenção</label><input type="text" id="vei-manut-obs"></div>
+  <div class="fg"><label>Status</label><select id="vei-status" onchange="toggleManutCampos(this.value)">
+    <option value="ativo">Ativo</option>
+    <option value="manutencao">Em Manutenção</option>
+    <option value="inativo">Inativo</option>
+  </select></div>
+  <div id="manut-campos" style="display:none;background:#fff8e6;border:1px solid #f0c060;border-radius:var(--r1);padding:12px;margin-top:8px">
+    <div style="font-size:.78rem;font-weight:700;color:#7a5200;margin-bottom:10px">🔧 Detalhes da Manutenção</div>
+    <div class="form-row">
+      <div class="fg"><label>Data de Entrada</label><input type="date" id="vei-manut-entrada"></div>
+      <div class="fg"><label>Quem Levou</label><select id="vei-manut-levou"><option value="">— Selecionar —</option></select></div>
+    </div>
+    <div class="fg"><label>Motivo / Obs.</label><input type="text" id="vei-manut-obs" placeholder="Ex: Revisão preventiva, freios..."></div>
+    <div style="font-size:.74rem;font-weight:600;color:#2E8B57;margin:10px 0 6px">✅ Retorno (preencher quando voltar)</div>
+    <div class="form-row">
+      <div class="fg"><label>Data de Retorno</label><input type="date" id="vei-manut-saida"></div>
+      <div class="fg"><label>Quem Trouxe</label><select id="vei-manut-trouxe"><option value="">— Selecionar —</option></select></div>
+    </div>
   </div>
   <div class="mf">
     <button class="btn btn-g" onclick="closeModal('modal-veiculo')">Cancelar</button>
@@ -701,6 +718,12 @@ function getSpecial(dt){
 
 // ══════════ NAVEGAÇÃO ══════════
 function goPage(p,btn,source){
+  // Páginas protegidas por senha
+  if(precisaSenha(p) && !_sessaoDesbloqueada){
+    const nomes={'escala':'Escala','cadastros':'Cadastros'};
+    pedirSenha(()=>goPage(p,btn,source), '🔒 '+( nomes[p]||p));
+    return;
+  }
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   const pageEl=document.getElementById('page-'+p); if(pageEl) pageEl.classList.add('active');
   // Sync header nav
@@ -741,7 +764,7 @@ function openModal(id){
   document.getElementById(id).classList.add('open');
 }
 function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('open');}
-document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open')}));
+document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg){bg.classList.remove('open','center');if(bg.id==='modal-senha'){_senhaCallback=null;}}}));
 
 // ══════════ DASHBOARD ══════════
 function renderDashboard(){
@@ -968,7 +991,6 @@ function renderEscala(){
 
   // Se dados ainda não carregaram, aguarda
   const mots=DB.get('motoristas');
-  console.log('ESC1 mots=',mots?.length,'statuses=',[...new Set((mots||[]).map(m=>m?.status))]);
   if(!mots||!mots.length){
     document.getElementById('escala-body').innerHTML='<div class="empty">⏳ Carregando dados...</div>';
     setTimeout(renderEscala, 800);
@@ -977,9 +999,7 @@ function renderEscala(){
 
   // Mostrar todos os motoristas ativos na escala
   const todosAtivos=mots.filter(m=>m.status==='Ativo'||m.status==='ativo');
-  console.log('ESC2 ativos=',todosAtivos.length,'disp antes sort=',todosAtivos.length);
   const disp=(todosAtivos.length?todosAtivos:mots).sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'));
-  console.log('ESC3 disp final=',disp.length);
 
   const escalas=DB.get('escalas').filter(e=>e.data===dt);
   const rotas=DB.get('rotas');
@@ -1024,8 +1044,8 @@ function renderEscala(){
   const rotasHoje=rotasParaDt(dt);
   const rotasAtribuidas=new Set(escalas.filter(e=>e.papel==='rota').map(e=>e.rota_id));
 
-  let html=`<div class="esc-mot-row esc-head">
-    <span>Motorista</span><span>Rotas Atribuídas</span><span>Veículo Principal</span><span></span>
+  let html=`<div class="esc-mot-row esc-head" style="font-size:.68rem">
+    <span>Motorista</span><span>Rotas (intervalo)</span><span>Veículo</span>
   </div>`;
 
   [...disp].sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).forEach(m=>{
@@ -1037,7 +1057,7 @@ function renderEscala(){
     const rotasChips=linhas.map(l=>{
       const r=rotas.find(x=>x.id===l.rota_id);
       return`<span class="rota-chip assigned" onclick="openEditEsc(${l.esc_id})" title="Clique para editar">
-        ${r?r.nome:'?'}${r&&(r.duracao||1)>1?` <span class="b bp" style="padding:1px 5px;font-size:.65rem">⛺${r.duracao}d</span>`:''} <span style="opacity:.6;font-size:.68rem">✎</span>
+        ${r?r.nome:'?'}${r?` <span style="opacity:.55;font-size:.65rem">${r.intervalo}d</span>`:''}${r&&(r.duracao||1)>1?` <span class="b bp" style="padding:1px 4px;font-size:.62rem">⛺</span>`:''} <span style="opacity:.5;font-size:.65rem">✎</span>
       </span>`;
     }).join('');
 
@@ -1052,21 +1072,16 @@ function renderEscala(){
     const isSobreaviso=Array.isArray(sp.sobreaviso)?sp.sobreaviso.includes(m.id):sp.sobreaviso===m.id;
 
     html+=`<div class="esc-mot-row">
-      <div>
+      <div style="line-height:1.2">
         <div class="mot-label">${nomeV(m)}</div>
-        <div class="mot-status-inline">
-          ${isPlantao?'<span class="b ba" style="padding:2px 7px">⚡ Plantão</span>':''}
-          ${isSobreaviso?'<span class="b bbl" style="padding:2px 7px">📡 Sobre Aviso</span>':''}
-          <span style="color:var(--muted);font-size:.73rem">${totalRot}d trabalhados</span>
-        </div>
+        <div style="font-size:.68rem;color:var(--muted)">${isPlantao?'⚡ ':''}${isSobreaviso?'📡 ':''}${totalRot}d</div>
       </div>
-      <div class="rotas-do-dia">${rotasChips||'<span style="color:var(--muted);font-size:.78rem">Sem rota</span>'}${addBtn}</div>
+      <div class="rotas-do-dia">${rotasChips||'<span style="color:var(--muted);font-size:.76rem">—</span>'}${addBtn}</div>
       <div>
-        <select style="width:100%" onchange="setVeicPrinc(${m.id},this.value)">
+        <select style="width:100%;font-size:.78rem;padding:5px 8px;min-height:32px" onchange="setVeicPrinc(${m.id},this.value)">
           <option value="">— Veículo —</option>${veiOpts}
         </select>
       </div>
-      <div></div>
     </div>`;
   });
 
@@ -1079,9 +1094,7 @@ function renderEscala(){
     </div>`;
   }
 
-  console.log('ESC4 html length=',html.length,'escala-body exists=',!!document.getElementById('escala-body'));
   document.getElementById('escala-body').innerHTML=html;
-  console.log('ESC5 done, rows rendered=',document.querySelectorAll('.esc-mot-row').length);
   renderHistorico(dt);
 }
 
@@ -1176,6 +1189,12 @@ function openAtrib(motId){
     const rId=parseInt(this.value);
     document.getElementById('atrib-exp').innerHTML=rId?expertise(countRM(motId,rId)):'';
   };
+  // Se motorista é agregado, pre-selecionar AGREGADO no veículo
+  const motObj=DB.get('motoristas').find(x=>x.id===motId);
+  if(motObj&&motObj.tipo==='Agregado'){
+    const selVpre=document.getElementById('atrib-vei');
+    if(selVpre) selVpre.value='0'; // id=0 = AGREGADO
+  }
 
   const selV=document.getElementById('atrib-vei');
   selV.innerHTML='<option value="">— Veículo —</option>';
@@ -1358,11 +1377,10 @@ function renderPrevisaoMotorista(){
   const rotas=DB.get('rotas');
   const dowNames=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
-  // Grupos: CNH E (Julieta) → Colaborador D → Agregado
+  // Dois grupos: Colaboradores / Agregados
   const gruposMotorista=[
-    {label:'🚛 CNH E — Motoristas Julieta', cor:'#a07010', bg:'#fff8e6', mots:todosMotsAtivos.filter(m=>m.cnh==='E').sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'))},
-    {label:'🔵 Colaboradores CNH D',         cor:'var(--navy)',bg:'#e8eef2', mots:todosMotsAtivos.filter(m=>m.tipo!=='Agregado'&&(m.cnh||'D')==='D').sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'))},
-    {label:'🟡 Agregados',                   cor:'#7B3F9E', bg:'#f3e8fa', mots:todosMotsAtivos.filter(m=>m.tipo==='Agregado').sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'))},
+    {label:'🔵 Colaboradores', cor:'var(--navy)', bg:'#e8eef2', mots:todosMotsAtivos.filter(m=>m.tipo!=='Agregado').sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'))},
+    {label:'🟡 Agregados',     cor:'#7B3F9E',    bg:'#f3e8fa', mots:todosMotsAtivos.filter(m=>m.tipo==='Agregado').sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'))},
   ];
 
   const colW=`180px ${days.map(()=>'1fr').join(' ')}`;
@@ -1383,7 +1401,7 @@ function renderPrevisaoMotorista(){
     mots.forEach(m=>{
       html+=`<div class="prev-cell" style="font-weight:600;font-size:.82rem;border-right:1px solid var(--border);flex-direction:column;align-items:flex-start">
         <span>${nomeV(m)}</span>
-        <span style="font-weight:400;font-size:.7rem;color:var(--muted)">${m.tipo==='Agregado'?'Agregado':'Colaborador'} · CNH ${m.cnh||'D'}</span>
+        <span style="font-weight:400;font-size:.7rem;color:var(--muted)">${tipoV(m)} · CNH ${m.cnh||'D'}</span>
       </div>`;
       days.forEach(d=>{
         const isToday=d===dt;
@@ -1401,7 +1419,7 @@ function renderPrevisaoMotorista(){
           content=`<div class="day-event de-folga">${lbl}</div>`;
         } else {
           if(sp) content+=`<div class="day-event de-plantao">⚡ Plantão</div>`;
-          if(saArr.length) content+=`<div class="day-event de-sobreaviso">📡 S.Aviso${saArr.length>1?' ('+saArr.length+')':''}</div>`;
+          if(sa) content+=`<div class="day-event de-sobreaviso">📡 S.Aviso</div>`;
           if(ss) content+=`<div class="day-event" style="background:#e6f4ed;color:#1a5c36">🥛 Soro</div>`;
           if(sc) content+=`<div class="day-event" style="background:#fdecea;color:#7a1a1a">🆘 Socorro</div>`;
           rotasEsc.forEach(e=>{
@@ -1452,7 +1470,7 @@ function renderPrevisaoRota(){
     return a.nome.localeCompare(b.nome,'pt-BR');
   });
 
-  const colW=`200px ${days.map(()=>'1fr').join(' ')}`;
+  const colW=`170px ${days.map(()=>'1fr').join(' ')}`;
   let html=`<div style="display:grid;grid-template-columns:${colW};min-width:${200+days.length*110}px">`;
 
   // Cabeçalho
@@ -1475,9 +1493,8 @@ function renderPrevisaoRota(){
       html+=`<div style="grid-column:1/-1;background:${g===0?'#fff8e6':g===1?'#e8eef2':'#f3e8fa'};padding:6px 14px;font-size:.72rem;font-weight:700;letter-spacing:.5px;color:${g===0?'#a07010':g===1?'var(--navy)':'var(--purple)'};">${grupoLabels[g]}</div>`;
     }
 
-    html+=`<div class="prev-cell" style="font-weight:600;font-size:.82rem;border-right:1px solid var(--border);flex-direction:column;align-items:flex-start">
-      <span>${r.nome}</span>
-      <span style="font-weight:400;font-size:.7rem;color:var(--muted)">${r.intervalo}d${(r.duracao||1)>1?` · ⛺${r.duracao}d`:''}</span>
+    html+=`<div class="prev-cell" style="font-weight:600;font-size:.81rem;border-right:1px solid var(--border);flex-direction:column;align-items:flex-start;padding:4px 8px">
+      <span>${r.nome} <span style="font-weight:400;font-size:.68rem;color:var(--muted)">${r.intervalo}d${(r.duracao||1)>1?` ⛺`:''}</span></span>
     </div>`;
 
     days.forEach(d=>{
@@ -1503,7 +1520,7 @@ function renderPrevisaoRota(){
       let content='';
       if(esc&&m){
         content=`<div class="day-event de-rota" style="font-size:.72rem">
-          <b>${nomeV(m)}</b>${v?`<br><span style="opacity:.75">${v.frota}</span>`:''}
+          <b>${nomeV(m)}</b>${v?` · <span style="opacity:.8">${v.frota==='agg'?'agg':v.frota}</span>`:''}
         </div>`;
       } else if(emPernoite&&mPernoite){
         content=`<div class="day-event de-rota" style="font-size:.72rem;opacity:.7">
@@ -1617,28 +1634,94 @@ function renderVeiculos(){
   document.getElementById('cad-veiculos').innerHTML=`<div class="panel">
     <div class="ph"><div class="pt">🚛 Veículos</div><button class="btn btn-p" onclick="openVeiModal()">+ Novo</button></div>
     <div class="tw"><table>
-      <thead><tr><th>Frota</th><th>Placa</th><th>Modelo</th><th>Status</th><th>Obs.</th><th>Ações</th></tr></thead>
-      <tbody>${list.map(v=>`<tr>
+      <thead><tr><th>Frota</th><th>Placa</th><th>Modelo</th><th>Status</th><th>Entrada Manut.</th><th>Levou</th><th>Saída</th><th>Trouxe</th><th>Ações</th></tr></thead>
+      <tbody>${list.filter(v=>v.id!==0).map(v=>{
+        const mots=DB.get('motoristas');
+        const levou=v.manutLevouId?mots.find(m=>m.id===v.manutLevouId):null;
+        const trouxe=v.manutTrouxeId?mots.find(m=>m.id===v.manutTrouxeId):null;
+        return`<tr>
         <td><b>${v.frota}</b></td><td>${v.placa}</td><td>${v.modelo}</td>
-        <td><span class="b ${v.status==='ativo'?'bg':v.status==='manutencao'?'by':'bz'}">${v.status==='ativo'?'Ativo':v.status==='manutencao'?'Manutenção':'Inativo'}</span></td>
-        <td>${v.manutObs||'—'}</td>
-        <td><button class="btn btn-g btn-sm" onclick="editVei(${v.id})">✏️</button>
+        <td><span class="b ${v.status==='ativo'?'bg':v.status==='manutencao'?'by':'bz'}">${v.status==='ativo'?'Ativo':v.status==='manutencao'?'🔧 Manutenção':'Inativo'}</span></td>
+        <td>${v.manutEntrada?fmtDate(v.manutEntrada):'—'}</td>
+        <td>${levou?nomeV(levou):'—'}</td>
+        <td>${v.manutSaida?fmtDate(v.manutSaida):'—'}</td>
+        <td>${trouxe?nomeV(trouxe):'—'}</td>
+        <td style="white-space:nowrap"><button class="btn btn-g btn-sm" onclick="editVei(${v.id})">✏️</button>
             <button class="btn btn-d btn-sm" onclick="delVei(${v.id})">🗑</button></td>
-      </tr>`).join('')||'<tr><td colspan="6" class="empty">Nenhum.</td></tr>'}</tbody>
+      </tr>`;}).join('')||'<tr><td colspan="6" class="empty">Nenhum.</td></tr>'}</tbody>
     </table></div>
   </div>`;
 }
-function openVeiModal(){['vei-id','vei-frota','vei-placa','vei-modelo','vei-manut-obs'].forEach(i=>document.getElementById(i).value='');document.getElementById('vei-status').value='ativo';document.getElementById('mv-title').textContent='Novo Veículo';openModal('modal-veiculo');}
-async function editVei(id){const v=DB.get('veiculos').find(x=>x.id===id);document.getElementById('vei-id').value=id;document.getElementById('vei-frota').value=v.frota;document.getElementById('vei-placa').value=v.placa;document.getElementById('vei-modelo').value=v.modelo;document.getElementById('vei-status').value=v.status||'ativo';document.getElementById('vei-manut-obs').value=v.manutObs||'';document.getElementById('mv-title').textContent='Editar Veículo';openModal('modal-veiculo');}
+function toggleManutCampos(status){
+  const campos=document.getElementById('manut-campos');
+  if(!campos) return;
+  campos.style.display=status==='manutencao'?'':'none';
+  // Popular selects de motoristas
+  if(status==='manutencao'){
+    const mots=DB.get('motoristas');
+    ['vei-manut-levou','vei-manut-trouxe'].forEach(sid=>{
+      const sel=document.getElementById(sid);
+      if(!sel) return;
+      sel.innerHTML='<option value="">— Selecionar —</option>';
+      mots.sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).forEach(m=>sel.innerHTML+=`<option value="${m.id}">${nomeV(m)}</option>`);
+    });
+  }
+}
+
+function openVeiModal(){
+  ['vei-id','vei-frota','vei-placa','vei-modelo','vei-manut-obs','vei-manut-entrada','vei-manut-saida'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+  document.getElementById('vei-status').value='ativo';
+  toggleManutCampos('ativo');
+  document.getElementById('mv-title').textContent='Novo Veículo';
+  openModal('modal-veiculo');
+}
+async function editVei(id){
+  const v=DB.get('veiculos').find(x=>x.id===id);
+  document.getElementById('vei-id').value=id;
+  document.getElementById('vei-frota').value=v.frota;
+  document.getElementById('vei-placa').value=v.placa;
+  document.getElementById('vei-modelo').value=v.modelo;
+  document.getElementById('vei-status').value=v.status||'ativo';
+  toggleManutCampos(v.status||'ativo');
+  const obs=document.getElementById('vei-manut-obs');if(obs)obs.value=v.manutObs||'';
+  const ent=document.getElementById('vei-manut-entrada');if(ent)ent.value=v.manutEntrada||'';
+  const sai=document.getElementById('vei-manut-saida');if(sai)sai.value=v.manutSaida||'';
+  // Popular selects e pre-selecionar
+  if(v.status==='manutencao'){
+    const mots=DB.get('motoristas');
+    ['vei-manut-levou','vei-manut-trouxe'].forEach(sid=>{
+      const sel=document.getElementById(sid);
+      if(!sel) return;
+      sel.innerHTML='<option value="">— Selecionar —</option>';
+      mots.sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).forEach(m=>sel.innerHTML+=`<option value="${m.id}">${nomeV(m)}</option>`);
+    });
+    const sl=document.getElementById('vei-manut-levou');if(sl)sl.value=v.manutLevouId||'';
+    const st=document.getElementById('vei-manut-trouxe');if(st)st.value=v.manutTrouxeId||'';
+  }
+  document.getElementById('mv-title').textContent='Editar Veículo';
+  openModal('modal-veiculo');
+}
 async function saveVeiculo(){
   const id=document.getElementById('vei-id').value;
-  const list=DB.get('veiculos');
-  const obj={frota:document.getElementById('vei-frota').value.trim(),placa:document.getElementById('vei-placa').value.trim(),modelo:document.getElementById('vei-modelo').value.trim(),status:document.getElementById('vei-status').value,manutObs:document.getElementById('vei-manut-obs').value};
+  const list=DB.get('veiculos').filter(v=>v.id!==0); // excluir AGREGADO virtual
+  const obj={
+    frota:document.getElementById('vei-frota').value.trim(),
+    placa:document.getElementById('vei-placa').value.trim(),
+    modelo:document.getElementById('vei-modelo').value.trim(),
+    status:document.getElementById('vei-status').value,
+    manutObs:(document.getElementById('vei-manut-obs')?.value)||'',
+    manutEntrada:(document.getElementById('vei-manut-entrada')?.value)||null,
+    manutSaida:(document.getElementById('vei-manut-saida')?.value)||null,
+    manutLevouId:parseInt(document.getElementById('vei-manut-levou')?.value)||null,
+    manutTrouxeId:parseInt(document.getElementById('vei-manut-trouxe')?.value)||null,
+  };
   if(!obj.frota){alert('Informe a frota.');return;}
   try{
     if(id){const i=list.findIndex(x=>x.id==id);if(i>=0)list[i]={...list[i],...obj};await syncVeiculo(list.find(x=>x.id==id),false);}
     else{const created=await syncVeiculo(obj,true);if(created)list.push({...created,manutObs:created.manut_obs||''});}
-    DB.set('veiculos',list);closeModal('modal-veiculo');renderVeiculos();showToast('Veículo salvo!','success');
+    // Reinjetar AGREGADO virtual
+    DB.set('veiculos',[{id:0,frota:'agg',placa:'',modelo:'AGREGADO',status:'ativo',manutObs:''},...list]);
+    closeModal('modal-veiculo');renderVeiculos();showToast('Veículo salvo!','success');
   }catch(e){showToast('Erro ao salvar veículo.','danger');}
 }
 async function delVei(id){if(!confirm('Excluir?'))return;try{await deleteVeiculo(id);DB.set('veiculos',DB.get('veiculos').filter(x=>x.id!==id));renderVeiculos();showToast('Excluído!','success');}catch(e){showToast('Erro ao excluir.','danger');}}
@@ -1866,7 +1949,39 @@ function printRel(divId,titulo){
   <h1>EscalaOP — ${titulo} &nbsp;<small style="font-weight:400;color:#6B7A86">${new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'})}</small></h1>
   ${conteudo}
   <script>window.onload=()=>window.print()<\/script>
-  </body></html>`);
+  
+<!-- Modal Senha -->
+<div class="modal-bg" id="modal-senha" style="align-items:center">
+<div class="modal" style="max-width:340px;border-radius:16px">
+  <div style="text-align:center;margin-bottom:16px">
+    <div style="font-size:2rem">🔒</div>
+    <h3 style="margin-bottom:4px" id="senha-titulo">Área Restrita</h3>
+    <p style="font-size:.82rem;color:var(--muted)" id="senha-desc">Digite a senha para acessar esta área.</p>
+  </div>
+  <div class="fg">
+    <input type="password" id="senha-input" placeholder="Digite a senha..." style="width:100%;text-align:center;font-size:1.1rem;letter-spacing:4px"
+      onkeydown="if(event.key==='Enter')confirmarSenha()">
+  </div>
+  <p id="senha-erro" style="color:var(--red);font-size:.8rem;text-align:center;min-height:18px;margin-top:4px"></p>
+  <div class="mf" style="justify-content:center;gap:12px;margin-top:12px">
+    <button class="btn btn-g" onclick="closeModal('modal-senha');_senhaCallback=null">Cancelar</button>
+    <button class="btn btn-p" onclick="confirmarSenha()">🔓 Entrar</button>
+  </div>
+</div></div>
+
+<!-- Modal Alterar Senha -->
+<div class="modal-bg" id="modal-alterar-senha" style="align-items:center">
+<div class="modal" style="max-width:340px;border-radius:16px">
+  <h3>🔑 Alterar Senha</h3>
+  <div class="fg"><label>Senha Atual</label><input type="password" id="as-atual" style="width:100%"></div>
+  <div class="fg"><label>Nova Senha</label><input type="password" id="as-nova" style="width:100%"></div>
+  <div class="fg"><label>Confirmar Nova Senha</label><input type="password" id="as-confirma" style="width:100%"></div>
+  <div class="mf">
+    <button class="btn btn-g" onclick="closeModal('modal-alterar-senha')">Cancelar</button>
+    <button class="btn btn-p" onclick="salvarNovaSenha()">Salvar</button>
+  </div>
+</div></div>
+</body></html>`);
   w.document.close();
 }
 
@@ -2109,7 +2224,7 @@ async function carregarDados(){
       tipo: m.tipo==='Próprio'?'Colaborador':(m.tipo||'Colaborador'),
       manutObs:m.manut_obs
     })));
-    DB.set('veiculos', veiculos.map(v=>({...v, manutObs:v.manut_obs})));
+    DB.set('veiculos', [{id:0,frota:'agg',placa:'',modelo:'AGREGADO',status:'ativo',manutObs:''},...veiculos.map(v=>({...v, manutObs:v.manut_obs}))]);
     DB.set('rotas', rotas.map(r=>({...r,grupo:r.grupo||r.tipo_rota||'colaborador'})));
     DB.set('produtores', produtores);
     DB.set('escalas', escalas.map(e=>({...e, rota_id:e.rota_id, motorista_id:e.motorista_id, veiculo_id:e.veiculo_id})));
@@ -2166,7 +2281,14 @@ async function syncMotorista(m, isNew){
 async function deleteMotorista(id){ await supa('motoristas','DELETE',null,`?id=eq.${id}`); }
 
 async function syncVeiculo(v, isNew){
-  const payload={frota:v.frota,placa:v.placa,modelo:v.modelo,status:v.status,manut_obs:v.manutObs||''};
+  const payload={
+    frota:v.frota,placa:v.placa,modelo:v.modelo,status:v.status,
+    manut_obs:v.manutObs||'',
+    manut_entrada:v.manutEntrada||null,
+    manut_saida:v.manutSaida||null,
+    manut_levou_id:v.manutLevouId||null,
+    manut_trouxe_id:v.manutTrouxeId||null,
+  };
   if(isNew){ const r=await supa('veiculos','POST',payload); return r?r[0]:null; }
   else { await supa('veiculos','PATCH',payload,`?id=eq.${v.id}`); return v; }
 }
@@ -2223,9 +2345,113 @@ function showLoading(show){
   el.style.display=show?'flex':'none';
 }
 
+
+// ══════════════════════════════════════════════
+// SISTEMA DE SENHA
+// ══════════════════════════════════════════════
+const SENHA_KEY = 'escalaop_senha_hash';
+const SENHA_DEFAULT = 'escala2025'; // senha padrão inicial
+
+// Hash simples (não criptográfico, apenas ofuscação)
+function hashSenha(s){ 
+  let h=0; 
+  for(let i=0;i<s.length;i++) h=(Math.imul(31,h)+s.charCodeAt(i))|0; 
+  return h.toString(36); 
+}
+
+function getSenhaHash(){
+  return localStorage.getItem(SENHA_KEY) || hashSenha(SENHA_DEFAULT);
+}
+
+// Sessão desbloqueada (dura enquanto a aba estiver aberta)
+let _sessaoDesbloqueada = false;
+let _senhaCallback = null;
+
+function precisaSenha(pagina){
+  return pagina === 'escala' || pagina === 'cadastros';
+}
+
+function pedirSenha(callback, titulo='Área Restrita'){
+  _senhaCallback = callback;
+  document.getElementById('senha-titulo').textContent = titulo;
+  document.getElementById('senha-input').value = '';
+  document.getElementById('senha-erro').textContent = '';
+  const modal = document.getElementById('modal-senha');
+  modal.classList.add('open', 'center');
+  setTimeout(()=>document.getElementById('senha-input').focus(), 100);
+}
+
+function confirmarSenha(){
+  const digitada = document.getElementById('senha-input').value;
+  if(!digitada){ document.getElementById('senha-erro').textContent='Digite a senha.'; return; }
+  if(hashSenha(digitada) === getSenhaHash()){
+    _sessaoDesbloqueada = true;
+    closeModal('modal-senha');
+    document.getElementById('senha-erro').textContent = '';
+    if(_senhaCallback){ _senhaCallback(); _senhaCallback=null; }
+  } else {
+    document.getElementById('senha-erro').textContent = '❌ Senha incorreta.';
+    document.getElementById('senha-input').value = '';
+    document.getElementById('senha-input').focus();
+  }
+}
+
+async function salvarNovaSenha(){
+  const atual = document.getElementById('as-atual').value;
+  const nova = document.getElementById('as-nova').value;
+  const confirma = document.getElementById('as-confirma').value;
+  if(hashSenha(atual) !== getSenhaHash()){ showToast('Senha atual incorreta.','danger'); return; }
+  if(!nova || nova.length < 4){ showToast('A nova senha deve ter pelo menos 4 caracteres.','warn'); return; }
+  if(nova !== confirma){ showToast('As senhas não coincidem.','danger'); return; }
+  localStorage.setItem(SENHA_KEY, hashSenha(nova));
+  closeModal('modal-alterar-senha');
+  ['as-atual','as-nova','as-confirma'].forEach(id=>document.getElementById(id).value='');
+  showToast('Senha alterada com sucesso!','success');
+}
+
+function abrirAlterarSenha(){
+  if(!_sessaoDesbloqueada){
+    pedirSenha(()=>{ openModal('modal-alterar-senha'); }, 'Confirme sua senha');
+    return;
+  }
+  openModal('modal-alterar-senha');
+}
+
 // ══════════ INIT ══════════
 document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
 carregarDados();
 </script>
+
+<!-- Modal Senha -->
+<div class="modal-bg" id="modal-senha" style="align-items:center">
+<div class="modal" style="max-width:340px;border-radius:16px">
+  <div style="text-align:center;margin-bottom:16px">
+    <div style="font-size:2rem">🔒</div>
+    <h3 style="margin-bottom:4px" id="senha-titulo">Área Restrita</h3>
+    <p style="font-size:.82rem;color:var(--muted)" id="senha-desc">Digite a senha para acessar esta área.</p>
+  </div>
+  <div class="fg">
+    <input type="password" id="senha-input" placeholder="Digite a senha..." style="width:100%;text-align:center;font-size:1.1rem;letter-spacing:4px"
+      onkeydown="if(event.key==='Enter')confirmarSenha()">
+  </div>
+  <p id="senha-erro" style="color:var(--red);font-size:.8rem;text-align:center;min-height:18px;margin-top:4px"></p>
+  <div class="mf" style="justify-content:center;gap:12px;margin-top:12px">
+    <button class="btn btn-g" onclick="closeModal('modal-senha');_senhaCallback=null">Cancelar</button>
+    <button class="btn btn-p" onclick="confirmarSenha()">🔓 Entrar</button>
+  </div>
+</div></div>
+
+<!-- Modal Alterar Senha -->
+<div class="modal-bg" id="modal-alterar-senha" style="align-items:center">
+<div class="modal" style="max-width:340px;border-radius:16px">
+  <h3>🔑 Alterar Senha</h3>
+  <div class="fg"><label>Senha Atual</label><input type="password" id="as-atual" style="width:100%"></div>
+  <div class="fg"><label>Nova Senha</label><input type="password" id="as-nova" style="width:100%"></div>
+  <div class="fg"><label>Confirmar Nova Senha</label><input type="password" id="as-confirma" style="width:100%"></div>
+  <div class="mf">
+    <button class="btn btn-g" onclick="closeModal('modal-alterar-senha')">Cancelar</button>
+    <button class="btn btn-p" onclick="salvarNovaSenha()">Salvar</button>
+  </div>
+</div></div>
 </body>
 </html>
