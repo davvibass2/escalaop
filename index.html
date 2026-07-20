@@ -2350,23 +2350,16 @@ function showLoading(show){
 // SISTEMA DE SENHA — armazenada no Supabase
 // ══════════════════════════════════════════════
 
-// Hash simples
-function hashSenha(s){
-  let h=0;
-  for(let i=0;i<s.length;i++) h=(Math.imul(31,h)+s.charCodeAt(i))|0;
-  return h.toString(36);
-}
-
-// Cache da hash em memória (carregada do Supabase no init)
-let _senhaHashCache = null;
+// Senha salva diretamente no Supabase (sem hash)
+let _senhaHashCache = null; // guarda a senha em memória durante a sessão
 
 async function carregarSenhaHash(){
   try{
     const r = await supa('config','GET',null,'?chave=eq.senha_hash&select=valor');
     if(r && r.length > 0) _senhaHashCache = r[0].valor;
-    else _senhaHashCache = hashSenha('escala2025'); // fallback
+    else _senhaHashCache = 'escala2025'; // fallback
   }catch(e){
-    _senhaHashCache = hashSenha('escala2025');
+    _senhaHashCache = 'escala2025';
   }
 }
 
@@ -2391,7 +2384,7 @@ function pedirSenha(callback, titulo='Área Restrita'){
 function confirmarSenha(){
   const digitada = document.getElementById('senha-input').value;
   if(!digitada){ document.getElementById('senha-erro').textContent='Digite a senha.'; return; }
-  if(hashSenha(digitada) === _senhaHashCache){
+  if(digitada === _senhaHashCache){
     _sessaoDesbloqueada = true;
     closeModal('modal-senha');
     document.getElementById('senha-erro').textContent = '';
@@ -2407,13 +2400,12 @@ async function salvarNovaSenha(){
   const atual = document.getElementById('as-atual').value;
   const nova  = document.getElementById('as-nova').value;
   const conf  = document.getElementById('as-confirma').value;
-  if(hashSenha(atual) !== _senhaHashCache){ showToast('Senha atual incorreta.','danger'); return; }
+  if(atual !== _senhaHashCache){ showToast('Senha atual incorreta.','danger'); return; }
   if(!nova || nova.length < 4){ showToast('Mínimo 4 caracteres.','warn'); return; }
   if(nova !== conf){ showToast('As senhas não coincidem.','danger'); return; }
   try{
-    const novoHash = hashSenha(nova);
-    await supa('config','PATCH',{valor: novoHash},'?chave=eq.senha_hash');
-    _senhaHashCache = novoHash;
+    await supa('config','PATCH',{valor: nova},'?chave=eq.senha_hash');
+    _senhaHashCache = nova;
     closeModal('modal-alterar-senha');
     ['as-atual','as-nova','as-confirma'].forEach(id=>document.getElementById(id).value='');
     showToast('Senha alterada! Todos os dispositivos precisarão usar a nova senha.','success');
