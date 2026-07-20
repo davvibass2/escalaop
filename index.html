@@ -705,6 +705,13 @@ function rotasParaDt(dt){
   });
 }
 function veiculosAtivos(){return DB.get('veiculos').filter(v=>v.status==='ativo')}
+// Veículos disponíveis para um motorista específico
+// Agregado → só agg (id=0); Colaborador → todos exceto agg
+function veiculosParaMot(motId){
+  const m=DB.get('motoristas').find(x=>x.id===motId);
+  const isAgg=m&&m.tipo==='Agregado';
+  return veiculosAtivos().filter(v=>isAgg ? v.id===0 : v.id!==0);
+}
 
 // escala do dia do motorista
 // getEscDia removida (não utilizada)
@@ -976,9 +983,12 @@ function renderEscalaPorRota(){
     disp.forEach(m=>o+=`<option value="${m.id}" ${m.id===selId?'selected':''}>${nomeV(m)}</option>`);
     return o;
   };
-  const veiOpts=(selId)=>{
+  const veiOpts=(selId, motId)=>{
+    const isAgg=motId&&(DB.get('motoristas').find(m=>m.id===motId)?.tipo==='Agregado');
     let o='<option value="">— Veículo —</option>';
-    veics.filter(v=>v.status==='ativo').sort((a,b)=>a.frota.localeCompare(b.frota,'pt-BR',{numeric:true}))
+    veics.filter(v=>v.status==='ativo')
+      .filter(v=>motId?(isAgg?v.id===0:v.id!==0):true)
+      .sort((a,b)=>a.frota.localeCompare(b.frota,'pt-BR',{numeric:true}))
       .forEach(v=>o+=`<option value="${v.id}" ${v.id===selId?'selected':''}>${v.frota} — ${v.modelo}</option>`);
     return o;
   };
@@ -1004,7 +1014,7 @@ function renderEscalaPorRota(){
       <div>
         <select style="width:100%;font-size:.78rem;padding:4px 8px;min-height:30px"
           onchange="escalaRotaChangeVei(${r.id},this.value,'${dt}',${escId||'null'})">
-          ${veiOpts(selVei)}
+          ${veiOpts(selVei, selMot)}
         </select>
       </div>
     </div>`;
@@ -1173,7 +1183,7 @@ function renderEscalaPorMotorista(){
   [...disp].sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).forEach(m=>{
     const linhas=escLinhas[m.id]||[];
     const veicPrinc=linhas[0]?.veiculo_id;
-    const veicsAtvs=veiculosAtivos();
+    const veicsAtvs=veiculosParaMot(m.id);
     const veiOpts=[...veicsAtvs].sort((a,b)=>a.frota.localeCompare(b.frota,'pt-BR',{numeric:true})).map(v=>`<option value="${v.id}" ${v.id===veicPrinc?'selected':''}>${v.frota} — ${v.modelo}</option>`).join('');
 
     const rotasChips=linhas.map(l=>{
@@ -1320,7 +1330,10 @@ function openAtrib(motId){
 
   const selV=document.getElementById('atrib-vei');
   selV.innerHTML='<option value="">— Veículo —</option>';
-  veiculosAtivos().sort((a,b)=>a.frota.localeCompare(b.frota,'pt-BR',{numeric:true})).forEach(v=>selV.innerHTML+=`<option value="${v.id}">${v.frota} — ${v.modelo}</option>`);
+  veiculosParaMot(motId).sort((a,b)=>a.frota.localeCompare(b.frota,'pt-BR',{numeric:true})).forEach(v=>selV.innerHTML+=`<option value="${v.id}">${v.frota} — ${v.modelo}</option>`);
+  // Auto-selecionar agg para agregados
+  const motParaAtrib=DB.get('motoristas').find(x=>x.id===motId);
+  if(motParaAtrib&&motParaAtrib.tipo==='Agregado') selV.value='0';
   openModal('modal-atrib');
 }
 
@@ -2346,7 +2359,9 @@ async function carregarDados(){
       tipo: m.tipo==='Próprio'?'Colaborador':(m.tipo||'Colaborador'),
       manutObs:m.manut_obs
     })));
-    DB.set('veiculos', [{id:0,frota:'agg',placa:'',modelo:'AGREGADO',status:'ativo',manutObs:''},...veiculos.map(v=>({...v, manutObs:v.manut_obs}))]);
+    // Filtrar veículo real com frota 'agg' (é virtual, representado pelo id=0)
+    const veiculosFiltrados=veiculos.filter(v=>v.frota!=='agg'&&v.frota!=='AGG');
+    DB.set('veiculos', [{id:0,frota:'agg',placa:'',modelo:'AGREGADO',status:'ativo',manutObs:''},...veiculosFiltrados.map(v=>({...v, manutObs:v.manut_obs}))]);
     DB.set('rotas', rotas.map(r=>({...r,grupo:r.grupo||r.tipo_rota||'colaborador'})));
     DB.set('produtores', produtores);
     DB.set('escalas', escalas.map(e=>({...e, rota_id:e.rota_id, motorista_id:e.motorista_id, veiculo_id:e.veiculo_id})));
