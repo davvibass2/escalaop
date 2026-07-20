@@ -138,7 +138,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 .emergencia-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px}
 
 /* ESCALA */
-.esc-mot-row{display:grid;grid-template-columns:110px 1fr 150px;align-items:center;gap:4px;padding:4px 8px;border-bottom:1px solid var(--border)}
+.esc-mot-row{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;gap:4px;padding:4px 8px;border-bottom:1px solid var(--border)}
 .esc-mot-row:last-child{border-bottom:none}
 .esc-head{background:var(--bg);font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);align-items:center}
 .mot-label{font-weight:600;font-size:.82rem}
@@ -327,7 +327,13 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
   <!-- ESCALA POR MOTORISTA -->
   <div class="panel">
     <div class="ph">
-      <div class="pt">📆 Escala do Dia — <span id="escala-date-label"></span></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="pt">📆 Escala do Dia — <span id="escala-date-label"></span></div>
+        <div style="display:flex;border:1px solid var(--border);border-radius:var(--r1);overflow:hidden">
+          <button id="esc-vis-mot" onclick="setEscalaVisao('motorista',this)" style="padding:5px 12px;font-size:.79rem;font-weight:600;border:none;cursor:pointer;background:var(--navy);color:#fff">Por Motorista</button>
+          <button id="esc-vis-rot" onclick="setEscalaVisao('rota',this)" style="padding:5px 12px;font-size:.79rem;font-weight:600;border:none;cursor:pointer;background:none;color:var(--muted)">Por Rota</button>
+        </div>
+      </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <input type="date" id="escala-date" onchange="renderEscala()">
         <button class="btn btn-a" onclick="salvarEscala()">💾 Salvar</button>
@@ -933,6 +939,122 @@ function countTotalDias(mId){
 // linhas pendentes {motId: [{rota_id, veiculo_id}]}
 let escLinhas={};
 let _sobreAvisoIds=[];
+let escalaVisao='motorista'; // 'motorista' ou 'rota'
+
+function setEscalaVisao(v, btn){
+  escalaVisao=v;
+  document.getElementById('esc-vis-mot').style.background = v==='motorista'?'var(--navy)':'none';
+  document.getElementById('esc-vis-mot').style.color      = v==='motorista'?'#fff':'var(--muted)';
+  document.getElementById('esc-vis-rot').style.background = v==='rota'?'var(--navy)':'none';
+  document.getElementById('esc-vis-rot').style.color      = v==='rota'?'#fff':'var(--muted)';
+  renderEscala();
+}
+
+function renderEscala(){
+  if(escalaVisao==='rota') return renderEscalaPorRota();
+  renderEscalaPorMotorista();
+}
+
+function renderEscalaPorRota(){
+  const dt=document.getElementById('escala-date').value||today();
+  document.getElementById('escala-date').value=dt;
+  document.getElementById('escala-date-label').textContent=fmtDate(dt);
+
+  const mots=DB.get('motoristas');
+  if(!mots||!mots.length){
+    document.getElementById('escala-body').innerHTML='<div class="empty">⏳ Carregando dados...</div>';
+    setTimeout(renderEscalaPorRota,800); return;
+  }
+
+  const rotas=DB.get('rotas').filter(r=>r.ativa).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const veics=DB.get('veiculos');
+  const escalas=DB.get('escalas').filter(e=>e.data===dt&&e.papel==='rota');
+  const disp=mots.filter(m=>m.status==='Ativo').sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'));
+
+  const motOpts=(selId)=>{
+    let o='<option value="">— Motorista —</option>';
+    disp.forEach(m=>o+=`<option value="${m.id}" ${m.id===selId?'selected':''}>${nomeV(m)}</option>`);
+    return o;
+  };
+  const veiOpts=(selId)=>{
+    let o='<option value="">— Veículo —</option>';
+    veics.filter(v=>v.status==='ativo').sort((a,b)=>a.frota.localeCompare(b.frota,'pt-BR',{numeric:true}))
+      .forEach(v=>o+=`<option value="${v.id}" ${v.id===selId?'selected':''}>${v.frota} — ${v.modelo}</option>`);
+    return o;
+  };
+
+  let html=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:6px 10px;background:var(--bg);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">
+    <span>Rota</span><span>Motorista</span><span>Veículo</span>
+  </div>`;
+
+  rotas.forEach(r=>{
+    const esc=escalas.find(e=>e.rota_id===r.id);
+    const selMot=esc?.motorista_id||null;
+    const selVei=esc?.veiculo_id||null;
+    const escId=esc?.id||null;
+
+    html+=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:5px 10px;border-bottom:1px solid var(--border);align-items:center">
+      <div style="font-size:.82rem;font-weight:600">${r.nome} <span style="color:var(--muted);font-weight:400;font-size:.7rem">${r.intervalo}d</span></div>
+      <div>
+        <select style="width:100%;font-size:.78rem;padding:4px 8px;min-height:30px"
+          onchange="escalaRotaChangeMot(${r.id},this.value,'${dt}',${escId||'null'})">
+          ${motOpts(selMot)}
+        </select>
+      </div>
+      <div>
+        <select style="width:100%;font-size:.78rem;padding:4px 8px;min-height:30px"
+          onchange="escalaRotaChangeVei(${r.id},this.value,'${dt}',${escId||'null'})">
+          ${veiOpts(selVei)}
+        </select>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('escala-body').innerHTML=html;
+  renderHistorico(dt);
+}
+
+async function escalaRotaChangeMot(rotaId, motId, dt, escId){
+  const motIdInt=parseInt(motId)||null;
+  try{
+    if(escId){
+      // Atualizar existente
+      const escalas=DB.get('escalas');
+      const i=escalas.findIndex(e=>e.id===escId);
+      if(i>=0) escalas[i].motorista_id=motIdInt;
+      await supa('escalas','PATCH',{motorista_id:motIdInt},`?id=eq.${escId}`);
+      DB.set('escalas',escalas);
+    } else if(motIdInt){
+      // Criar novo
+      const nova={data:dt,rota_id:rotaId,motorista_id:motIdInt,veiculo_id:null,papel:'rota'};
+      const created=await syncEscala(nova,true);
+      if(created){
+        const escalas=DB.get('escalas');
+        escalas.push(created);
+        DB.set('escalas',escalas);
+        // Atualizar última da rota
+        const rotas=DB.get('rotas');
+        const ri=rotas.findIndex(r=>r.id===rotaId);
+        if(ri>=0){rotas[ri].ultima=dt;await syncRota(rotas[ri],false);DB.set('rotas',rotas);}
+      }
+      // Re-renderizar para pegar o escId novo
+      renderEscalaPorRota();
+    }
+  }catch(e){showToast('Erro ao salvar.','danger');}
+}
+
+async function escalaRotaChangeVei(rotaId, veiId, dt, escId){
+  const veiIdInt=parseInt(veiId)||null;
+  try{
+    if(escId){
+      const escalas=DB.get('escalas');
+      const i=escalas.findIndex(e=>e.id===escId);
+      if(i>=0) escalas[i].veiculo_id=veiIdInt;
+      await supa('escalas','PATCH',{veiculo_id:veiIdInt},`?id=eq.${escId}`);
+      DB.set('escalas',escalas);
+    }
+  }catch(e){showToast('Erro ao salvar.','danger');}
+}
 
 function renderSobreAvisoChips(ids, disp){
   _sobreAvisoIds=[...ids];
@@ -984,7 +1106,7 @@ async function _salvarSobreAviso(){
   }catch(e){showToast('Erro ao salvar sobre aviso.','danger');}
 }
 
-function renderEscala(){
+function renderEscalaPorMotorista(){
   const dt=document.getElementById('escala-date').value||today();
   document.getElementById('escala-date').value=dt;
   document.getElementById('escala-date-label').textContent=fmtDate(dt);
