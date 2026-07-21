@@ -1055,12 +1055,13 @@ async function escalaRotaChangeMot(rotaId, motId, dt, escId){
 
 async function escalaRotaChangeVei(rotaId, veiId, dt, escId){
   const veiIdInt=parseInt(veiId)||null;
+  const veiIdSupabase=(veiIdInt===0)?null:veiIdInt; // agg virtual → null no Supabase
   try{
     if(escId){
       const escalas=DB.get('escalas');
       const i=escalas.findIndex(e=>e.id===escId);
       if(i>=0) escalas[i].veiculo_id=veiIdInt;
-      await supa('escalas','PATCH',{veiculo_id:veiIdInt},`?id=eq.${escId}`);
+      await supa('escalas','PATCH',{veiculo_id:veiIdSupabase},`?id=eq.${escId}`);
       DB.set('escalas',escalas);
     }
   }catch(e){showToast('Erro ao salvar.','danger');}
@@ -1235,7 +1236,8 @@ async function setVeicPrinc(motId,veiId){
   const dt=document.getElementById('escala-date').value||today();
   const escalas=DB.get('escalas');
   const linhasDia=escalas.filter(e=>e.data===dt&&e.motorista_id===motId&&e.papel==='rota');
-  linhasDia.forEach(e=>{e.veiculo_id=parseInt(veiId)||null});
+  const veiIdInt2=parseInt(veiId)||null;
+  linhasDia.forEach(e=>{e.veiculo_id=veiIdInt2===0?null:veiIdInt2});
   DB.set('escalas',escalas);
   // Sincroniza cada linha com Supabase
   for(const e of linhasDia){ try{ await syncEscala(e,false); }catch(_){} }
@@ -1403,7 +1405,8 @@ async function saveEscItem(){
   if(i<0)return;
   escalas[i].rota_id=parseInt(document.getElementById('ee-rota').value)||null;
   escalas[i].motorista_id=parseInt(document.getElementById('ee-mot').value)||null;
-  escalas[i].veiculo_id=parseInt(document.getElementById('ee-vei').value)||null;
+  const eeVei=parseInt(document.getElementById('ee-vei').value)||null;
+  escalas[i].veiculo_id=eeVei===0?null:eeVei;
   try{
     await syncEscala(escalas[i],false);
     DB.set('escalas',escalas);
@@ -2364,7 +2367,16 @@ async function carregarDados(){
     DB.set('veiculos', [{id:0,frota:'agg',placa:'',modelo:'AGREGADO',status:'ativo',manutObs:''},...veiculosFiltrados.map(v=>({...v, manutObs:v.manut_obs}))]);
     DB.set('rotas', rotas.map(r=>({...r,grupo:r.grupo||r.tipo_rota||'colaborador'})));
     DB.set('produtores', produtores);
-    DB.set('escalas', escalas.map(e=>({...e, rota_id:e.rota_id, motorista_id:e.motorista_id, veiculo_id:e.veiculo_id})));
+    const motsCached=DB.get('motoristas'); // já normalizado acima
+    DB.set('escalas', escalas.map(e=>{
+      // Se veiculo_id é null e motorista é agregado, usar id=0 (AGREGADO virtual)
+      let veicId=e.veiculo_id;
+      if(!veicId){
+        const mot=motsCached.find(m=>m.id===e.motorista_id);
+        if(mot&&mot.tipo==='Agregado') veicId=0;
+      }
+      return {...e, veiculo_id:veicId};
+    }));
     DB.set('folgas', folgas);
 
     // rota_prod: converter array de linhas para objeto {rota_id: [prod_id,...]}
@@ -2455,7 +2467,9 @@ async function syncRotaProd(rotaId, prodIds){
 }
 
 async function syncEscala(e, isNew){
-  const payload={data:e.data,rota_id:e.rota_id||null,motorista_id:e.motorista_id||null,veiculo_id:e.veiculo_id||null,papel:e.papel||'rota'};
+  // id=0 é o veículo virtual AGREGADO — no Supabase salva como null
+  const veicId = (e.veiculo_id && e.veiculo_id !== 0) ? e.veiculo_id : null;
+  const payload={data:e.data,rota_id:e.rota_id||null,motorista_id:e.motorista_id||null,veiculo_id:veicId,papel:e.papel||'rota'};
   if(isNew){ const r=await supa('escalas','POST',payload); return r?r[0]:null; }
   else { await supa('escalas','PATCH',payload,`?id=eq.${e.id}`); return e; }
 }
