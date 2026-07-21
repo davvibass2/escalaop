@@ -1054,7 +1054,7 @@ async function escalaRotaChangeMot(rotaId, motId, dt, escId){
 }
 
 async function escalaRotaChangeVei(rotaId, veiId, dt, escId){
-  const veiIdInt=parseInt(veiId)||null;
+  const veiIdInt=(veiId===''||veiId===null||veiId===undefined)?null:parseInt(veiId);
   const veiIdSupabase=(veiIdInt===0)?null:veiIdInt; // agg virtual → null no Supabase
   try{
     if(escId){
@@ -1236,10 +1236,10 @@ async function setVeicPrinc(motId,veiId){
   const dt=document.getElementById('escala-date').value||today();
   const escalas=DB.get('escalas');
   const linhasDia=escalas.filter(e=>e.data===dt&&e.motorista_id===motId&&e.papel==='rota');
-  const veiIdInt2=parseInt(veiId)||null;
-  linhasDia.forEach(e=>{e.veiculo_id=veiIdInt2}); // manter 0 no cache
+  // IMPORTANTE: parseInt('0') || null = null — por isso usar conversão explícita
+  const veiIdInt2 = (veiId===''||veiId===null||veiId===undefined) ? null : parseInt(veiId);
+  linhasDia.forEach(e=>{e.veiculo_id=veiIdInt2});
   DB.set('escalas',escalas);
-  // Sincroniza cada linha com Supabase
   for(const e of linhasDia){ try{ await syncEscala(e,false); }catch(_){} }
 }
 
@@ -1342,7 +1342,7 @@ function openAtrib(motId){
 async function confirmarAtrib(){
   const motId=parseInt(document.getElementById('atrib-mot-id').value);
   const rotaId=parseInt(document.getElementById('atrib-rota').value)||null;
-  const veiId=parseInt(document.getElementById('atrib-vei').value)||null;
+  const _rv=document.getElementById('atrib-vei').value; const veiId=(_rv===''||_rv===null)?null:parseInt(_rv);
   const dt=_atribDt||today();
   if(!rotaId){alert('Selecione uma rota.');return;}
   try{
@@ -1405,7 +1405,7 @@ async function saveEscItem(){
   if(i<0)return;
   escalas[i].rota_id=parseInt(document.getElementById('ee-rota').value)||null;
   escalas[i].motorista_id=parseInt(document.getElementById('ee-mot').value)||null;
-  const eeVei=parseInt(document.getElementById('ee-vei').value)||null;
+  const _eeV=document.getElementById('ee-vei').value; const eeVei=(_eeV==='')?null:parseInt(_eeV);
   escalas[i].veiculo_id=eeVei; // manter 0 no cache, syncEscala converte para null
   try{
     await syncEscala(escalas[i],false);
