@@ -1060,7 +1060,7 @@ async function escalaRotaChangeVei(rotaId, veiId, dt, escId){
     if(escId){
       const escalas=DB.get('escalas');
       const i=escalas.findIndex(e=>e.id===escId);
-      if(i>=0) escalas[i].veiculo_id=veiIdInt;
+      if(i>=0) escalas[i].veiculo_id=veiIdInt; // cache usa 0 para agg
       await supa('escalas','PATCH',{veiculo_id:veiIdSupabase},`?id=eq.${escId}`);
       DB.set('escalas',escalas);
     }
@@ -1237,7 +1237,7 @@ async function setVeicPrinc(motId,veiId){
   const escalas=DB.get('escalas');
   const linhasDia=escalas.filter(e=>e.data===dt&&e.motorista_id===motId&&e.papel==='rota');
   const veiIdInt2=parseInt(veiId)||null;
-  linhasDia.forEach(e=>{e.veiculo_id=veiIdInt2===0?null:veiIdInt2});
+  linhasDia.forEach(e=>{e.veiculo_id=veiIdInt2}); // manter 0 no cache
   DB.set('escalas',escalas);
   // Sincroniza cada linha com Supabase
   for(const e of linhasDia){ try{ await syncEscala(e,false); }catch(_){} }
@@ -1406,7 +1406,7 @@ async function saveEscItem(){
   escalas[i].rota_id=parseInt(document.getElementById('ee-rota').value)||null;
   escalas[i].motorista_id=parseInt(document.getElementById('ee-mot').value)||null;
   const eeVei=parseInt(document.getElementById('ee-vei').value)||null;
-  escalas[i].veiculo_id=eeVei===0?null:eeVei;
+  escalas[i].veiculo_id=eeVei; // manter 0 no cache, syncEscala converte para null
   try{
     await syncEscala(escalas[i],false);
     DB.set('escalas',escalas);
@@ -2466,12 +2466,23 @@ async function syncRotaProd(rotaId, prodIds){
   }
 }
 
+// Normalizar veiculo_id=null → 0 se motorista for Agregado
+function normalizarVeicEscala(e){
+  if(e.veiculo_id) return e;
+  const mot=DB.get('motoristas').find(m=>m.id===e.motorista_id);
+  return {...e, veiculo_id:(mot&&mot.tipo==='Agregado')?0:null};
+}
+
 async function syncEscala(e, isNew){
   // id=0 é o veículo virtual AGREGADO — no Supabase salva como null
   const veicId = (e.veiculo_id && e.veiculo_id !== 0) ? e.veiculo_id : null;
   const payload={data:e.data,rota_id:e.rota_id||null,motorista_id:e.motorista_id||null,veiculo_id:veicId,papel:e.papel||'rota'};
-  if(isNew){ const r=await supa('escalas','POST',payload); return r?r[0]:null; }
-  else { await supa('escalas','PATCH',payload,`?id=eq.${e.id}`); return e; }
+  if(isNew){
+    const r=await supa('escalas','POST',payload);
+    // Normalizar resposta: veiculo_id null → 0 se agregado
+    return r?normalizarVeicEscala({...e,...r[0]}):null;
+  }
+  else { await supa('escalas','PATCH',payload,`?id=eq.${e.id}`); return normalizarVeicEscala(e); }
 }
 async function deleteEscala(id){ await supa('escalas','DELETE',null,`?id=eq.${id}`); }
 // deleteEscalasPorData removida (não utilizada)
