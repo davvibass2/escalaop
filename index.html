@@ -1779,33 +1779,25 @@ function renderPrevisaoRota(){
       // Rota encadeada: a rota 2 é escalada no dia anterior mas executada hoje
       const dAnterior=addDays(d,-1);
       const escsRotaHoje=escalas.filter(e=>e.data===d&&e.rota_id===r.id&&e.papel==='rota');
-      // Verificar se essa rota aparece como rota 2 encadeada de ontem
-      const escsEncadeadaOntem=escalas.filter(e=>{
-        if(e.data!==dAnterior||e.papel!=='rota') return false;
-        // Qualquer motorista com 2 rotas no mesmo dia é encadeada
-        const escsMotOntem=escalas.filter(x=>x.data===dAnterior&&x.motorista_id===e.motorista_id&&x.papel==='rota');
-        // É a segunda rota do motorista ontem?
-        return escsMotOntem.length>=2 && escsMotOntem[1].rota_id===r.id && e.rota_id===escsMotOntem[0].rota_id ? false :
-               escsMotOntem.length>=2 && escsMotOntem[1].rota_id===r.id && e.id===escsMotOntem[1].id;
-      });
-      const escsRota=[...escsRotaHoje,...escsEncadeadaOntem];
-      const esc=escsRota[0]||null;
-      // Pernoite: motorista saiu num dia anterior e ainda está na rota
+      // Pernoite: motoristas que saíram num dia anterior com essa rota de duração > 1
       const dur=r.duracao||1;
-      let emPernoite=null;
-      if(dur>1&&!escsRota.length){
+      let escsPernoite=[];
+      if(dur>1&&!escsRotaHoje.length){
         for(let back=1;back<dur;back++){
-          const dAnterior=addDays(d,-back);
-          const escAnterior=escalas.find(e=>e.data===dAnterior&&e.rota_id===r.id&&e.papel==='rota');
-          if(escAnterior){emPernoite=escAnterior;break;}
+          const dAnterior2=addDays(d,-back);
+          const escsAnterior=escalas.filter(e=>e.data===dAnterior2&&e.rota_id===r.id&&e.papel==='rota');
+          if(escsAnterior.length){escsPernoite=escsAnterior;break;}
         }
       }
-
-      const mPernoite=emPernoite?mots.find(x=>x.id===emPernoite.motorista_id):null;
+      const escsEncadeadaOntem=escalas.filter(e=>{
+        if(e.data!==dAnterior||e.papel!=='rota') return false;
+        const escsMotOntem=escalas.filter(x=>x.data===dAnterior&&x.motorista_id===e.motorista_id&&x.papel==='rota');
+        return escsMotOntem.length>=2 && escsMotOntem[1].rota_id===r.id && e.id===escsMotOntem[1].id;
+      });
+      const escsRota=[...escsRotaHoje,...escsEncadeadaOntem];
 
       let content='';
       if(escsRota.length){
-        // Mostrar todos os motoristas escalados
         content=escsRota.map(e=>{
           const m=mots.find(x=>x.id===e.motorista_id);
           const v=veics.find(x=>x.id===e.veiculo_id);
@@ -1813,10 +1805,13 @@ function renderPrevisaoRota(){
             <b>${m?nomeV(m):'?'}</b>${v?` · <span style="opacity:.8">${v.frota==='agg'?'agg':v.frota}</span>`:''}
           </div>`;
         }).join('');
-      } else if(emPernoite&&mPernoite){
-        content=`<div class="day-event de-rota" style="font-size:.72rem;opacity:.7">
-          ⛺ <b>${nomeV(mPernoite)}</b>
-        </div>`;
+      } else if(escsPernoite.length){
+        content=escsPernoite.map(e=>{
+          const m=mots.find(x=>x.id===e.motorista_id);
+          return`<div class="day-event de-rota" style="font-size:.72rem;opacity:.7">
+            ⛺ <b>${m?nomeV(m):'?'}</b>
+          </div>`;
+        }).join('');
       } else if(deveRodar){
         content=`<div class="day-event de-prev">Prevista</div>`;
       } else {
