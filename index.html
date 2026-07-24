@@ -1475,8 +1475,6 @@ async function delEscItem(){
 // Detecta se o motorista está em modo encadeado num dia
 // (CNH E com 2 rotas escaladas no mesmo dia)
 function isEncadeada(motId, dt){
-  const m=DB.get('motoristas').find(x=>x.id===motId);
-  if(!m||m.cnh!=='E') return false;
   const escalas=DB.get('escalas').filter(e=>e.data===dt&&e.motorista_id===motId&&e.papel==='rota');
   return escalas.length>=2;
 }
@@ -1784,8 +1782,7 @@ function renderPrevisaoRota(){
       // Verificar se essa rota aparece como rota 2 encadeada de ontem
       const escsEncadeadaOntem=escalas.filter(e=>{
         if(e.data!==dAnterior||e.papel!=='rota') return false;
-        const motEnc=DB.get('motoristas').find(x=>x.id===e.motorista_id);
-        if(!motEnc||motEnc.cnh!=='E') return false;
+        // Qualquer motorista com 2 rotas no mesmo dia é encadeada
         const escsMotOntem=escalas.filter(x=>x.data===dAnterior&&x.motorista_id===e.motorista_id&&x.papel==='rota');
         // É a segunda rota do motorista ontem?
         return escsMotOntem.length>=2 && escsMotOntem[1].rota_id===r.id && e.rota_id===escsMotOntem[0].rota_id ? false :
