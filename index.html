@@ -360,7 +360,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 <section class="page" id="page-previsao">
   <div class="panel">
     <div class="ph">
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <div class="pt">📅 Previsão</div>
         <!-- Visão -->
         <div style="display:flex;border:1px solid var(--border);border-radius:var(--r1);overflow:hidden">
@@ -372,6 +372,13 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
           <button class="prev-dias-btn active" style="padding:5px 11px;font-size:.79rem;font-weight:500;border:none;cursor:pointer;background:var(--navy);color:#fff" onclick="setPrevDias(7,this)">7 dias</button>
           <button class="prev-dias-btn"        style="padding:5px 11px;font-size:.79rem;font-weight:500;border:none;cursor:pointer;background:none;color:var(--muted)" onclick="setPrevDias(14,this)">14 dias</button>
           <button class="prev-dias-btn"        style="padding:5px 11px;font-size:.79rem;font-weight:500;border:none;cursor:pointer;background:none;color:var(--muted)" onclick="setPrevDias(30,this)">30 dias</button>
+        </div>
+        <!-- Navegação de data -->
+        <div style="display:flex;align-items:center;gap:6px">
+          <button onclick="navPrevisao(-1)" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.82rem">◀</button>
+          <span id="prev-data-label" style="font-size:.8rem;font-weight:600;min-width:80px;text-align:center"></span>
+          <button onclick="navPrevisao(1)" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.82rem">▶</button>
+          <button onclick="navPrevisaoHoje()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.79rem;color:var(--muted)">Hoje</button>
         </div>
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:.75rem;color:var(--muted)">
@@ -795,13 +802,13 @@ function renderDashboard(){
   document.getElementById('dash-cards').innerHTML=`
     <div style="background:var(--surface);border-radius:var(--r2);padding:16px 18px;box-shadow:var(--sh);border:1px solid var(--border);border-left:4px solid var(--green)">
       <div style="font-size:.71rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Disponíveis Hoje</div>
-      <div style="font-size:2rem;font-weight:700;color:var(--green)">${disp.length}</div>
+      <div style="font-size:2rem;font-weight:700;color:var(--green)">${disp.filter(m=>m.tipo!=='Agregado'&&!motEmEscala.has(m.id)).length}</div>
       <div style="font-size:.74rem;color:var(--muted);margin-top:4px">de ${mots.filter(m=>m.status==='Ativo').length} ativos</div>
     </div>
     <div style="background:var(--surface);border-radius:var(--r2);padding:16px 18px;box-shadow:var(--sh);border:1px solid var(--border);border-left:4px solid var(--amber)">
-      <div style="font-size:.71rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Rotas Hoje</div>
-      <div style="font-size:2rem;font-weight:700;color:var(--amber)">${rotasHoje.length}</div>
-      <div style="font-size:.74rem;color:var(--muted);margin-top:4px">${motEmEscala.size} escalados</div>
+      <div style="font-size:.71rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Rotas Escaladas Hoje</div>
+      <div style="font-size:2rem;font-weight:700;color:var(--amber)">${motEmEscala.size}</div>
+      <div style="font-size:.74rem;color:var(--muted);margin-top:4px">de ${rotasHoje.length} previstas</div>
     </div>
     <div style="background:var(--surface);border-radius:var(--r2);padding:16px 18px;box-shadow:var(--sh);border:1px solid var(--border);border-left:4px solid var(--yellow)">
       <div style="font-size:.71rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Férias / Afastados</div>
@@ -815,7 +822,8 @@ function renderDashboard(){
   `;
 
   // Motoristas — foco emergência
-  const dispNaoEscalados=disp.filter(m=>!motEmEscala.has(m.id)&&m.id!==sp.plantao&&!sp.sobreaviso.includes(m.id)&&m.id!==sp.soro&&m.id!==sp.socorro);
+  // Emergência: só colaboradores que não estão em rota (agregados têm agenda fixa)
+  const dispNaoEscalados=disp.filter(m=>m.tipo!=='Agregado'&&!motEmEscala.has(m.id)&&m.id!==sp.plantao&&!sp.sobreaviso.includes(m.id)&&m.id!==sp.soro&&m.id!==sp.socorro);
   document.getElementById('dash-disp-count').textContent=`${dispNaoEscalados.length} livre${dispNaoEscalados.length!==1?'s':''}`;
 
   let gridHtml='';
@@ -842,22 +850,32 @@ function renderDashboard(){
   });
   // Disponíveis livres
   dispNaoEscalados.forEach(m=>{
-    const totalRotas=countTotalDias(m.id);
+    const diasCons=diasConsecutivos(m.id, today());
+    const alJornada=alertaJornada(m.id, today());
     gridHtml+=`<div class="mot-card disponivel">
       <div class="mot-status-bar" style="background:var(--green)"></div>
       <div class="mot-nome">${nomeV(m)}</div>
       <div class="mot-tipo">${tipoV(m)}</div>
       <div class="mot-badge-area"><span class="b bg">🟢 Livre</span></div>
-      <div class="mot-rotas-count">${totalRotas} dias trabalhados</div>
+      <div class="mot-rotas-count" style="color:${alJornada?.nivel==='critico'?'var(--red)':alJornada?.nivel==='aviso'?'#c9920a':'var(--muted)'}">${
+        diasCons===0?'Descansando':
+        alJornada?.nivel==='critico'?`🔴 ${diasCons}d seguidos — FOLGA`:
+        alJornada?.nivel==='aviso'?`⚠️ ${diasCons}d seguidos`:
+        `${diasCons}d seguidos`
+      }</div>
     </div>`;
   });
   // Em rota hoje (rota + soro + socorro)
+  // Agregados: sempre disponíveis (agenda fixa, não excluir do pool)
   const motEmAtividade=new Set([
-    ...escalasHoje.filter(e=>e.papel==='rota').map(e=>e.motorista_id),
+    ...escalasHoje.filter(e=>e.papel==='rota'&&e.motorista_id).filter(e=>{
+      const m=mots.find(x=>x.id===e.motorista_id);
+      return m&&m.tipo!=='Agregado'; // só colaboradores ficam "ocupados"
+    }).map(e=>e.motorista_id),
     ...(sp.soro?[sp.soro]:[]),
     ...(sp.socorro?[sp.socorro]:[])
   ]);
-  if(motEmAtividade.size){
+  if(escalasHoje.filter(e=>e.papel==='rota').length){
     gridHtml+=`<div style="grid-column:1/-1;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding-top:12px;border-top:1px solid var(--border)">Em Rota Hoje</div>`;
     escalasHoje.filter(e=>e.papel==='rota').forEach(e=>{
       const m=mots.find(x=>x.id===e.motorista_id);
@@ -912,13 +930,20 @@ function renderDashboard(){
   // Alertas
   const rotasEsc=new Set(escalasHoje.filter(e=>e.papel==='rota').map(e=>e.rota_id));
   const naoEsc=rotasHoje.filter(r=>!rotasEsc.has(r.id));
-  let al='';
+  let al='', al2='';
+  // Alertas de jornada
+  const colabs=mots.filter(m=>m.tipo!=='Agregado'&&m.status==='Ativo');
+  colabs.forEach(m=>{
+    const al=alertaJornada(m.id,dt);
+    if(al&&al.nivel==='critico') al2+=`<div class="alert w" style="border-left-color:var(--red)">🔴 <b>${nomeV(m)}</b>: ${al.msg}</div>`;
+    else if(al) al2+=`<div class="alert i">⚠️ <b>${nomeV(m)}</b>: ${al.msg}</div>`;
+  });
   if(!sp.plantao) al+=`<div class="alert w">⚡ Nenhum motorista de plantão definido hoje.</div>`;
   if(!sp.sobreaviso.length) al+=`<div class="alert i">📡 Nenhum motorista de sobre aviso definido hoje.</div>`;
   if(naoEsc.length) al+=`<div class="alert w">⚠️ ${naoEsc.length} rota(s) sem motorista: ${naoEsc.map(r=>r.nome).join(', ')}</div>`;
   if(manut.length) al+=`<div class="alert w">🔧 ${manut.map(v=>`Frota ${v.frota}`).join(', ')} em manutenção.</div>`;
-  if(!al) al='<div class="alert s">✅ Sem alertas operacionais.</div>';
-  document.getElementById('dash-alertas').innerHTML=al;
+  const alFull=al2+al;
+  document.getElementById('dash-alertas').innerHTML=alFull||'<div class="alert s">✅ Sem alertas operacionais.</div>';
 
   // Rotas hoje
   document.getElementById('dash-rotas').innerHTML=rotasHoje.length?rotasHoje.map(r=>{
@@ -939,7 +964,8 @@ function renderDashboard(){
 }
 
 function countTotalDias(mId){
-  return new Set(DB.get('escalas').filter(e=>e.motorista_id===mId).map(e=>e.data)).size;
+  // Conta dias únicos em que o motorista foi escalado em ROTA (não sobre aviso, plantão etc)
+  return new Set(DB.get('escalas').filter(e=>e.motorista_id===mId&&e.papel==='rota').map(e=>e.data)).size;
 }
 
 // ══════════ ESCALA ══════════
@@ -999,7 +1025,8 @@ function renderEscalaPorRota(){
 
   rotas.forEach(r=>{
     const esc=escalas.find(e=>e.rota_id===r.id);
-    const selMot=esc?.motorista_id||null;
+    const rotaFixaMot=r.motorista_fixo||null;
+    const selMot=esc?.motorista_id||rotaFixaMot||null;
     const selVei=esc?.veiculo_id||null;
     const escId=esc?.id||null;
 
@@ -1206,8 +1233,8 @@ function renderEscalaPorMotorista(){
 
     html+=`<div class="esc-mot-row">
       <div style="line-height:1.2">
-        <div class="mot-label">${nomeV(m)}</div>
-        <div style="font-size:.68rem;color:var(--muted)">${isPlantao?'⚡ ':''}${isSobreaviso?'📡 ':''}${totalRot}d</div>
+        <div class="mot-label">${nomeV(m)}${(()=>{const al=alertaJornada(m.id,dt);return al?`<span style="font-size:.62rem;font-weight:700;margin-left:4px;color:${al.nivel==='critico'?'var(--red)':'#c9920a'}">${al.nivel==='critico'?'🔴':'⚠️'}</span>`:''})()}</div>
+        <div style="font-size:.68rem;color:var(--muted)">${isPlantao?'⚡ ':''}${isSobreaviso?'📡 ':''}${totalRot}d${(()=>{const al=alertaJornada(m.id,dt);return al?`<span style="color:${al.nivel==='critico'?'var(--red)':'#c9920a'}"> · ${al.msg}</span>`:''})()}</div>
       </div>
       <div class="rotas-do-dia">${rotasChips||'<span style="color:var(--muted);font-size:.76rem">—</span>'}${addBtn}</div>
       <div>
@@ -1288,6 +1315,8 @@ function openAtrib(motId){
   const mot=DB.get('motoristas').find(x=>x.id===motId);
   document.getElementById('atrib-title').textContent=`Atribuir Rota — ${mot?nomeV(mot):''}`;
   document.getElementById('atrib-mot-id').value=motId;
+  // Pré-selecionar veículo fixo do motorista se existir
+  const motFixoVei=mot?.veiculo_fixo_id||null;
 
   const escalas=DB.get('escalas').filter(e=>e.data===_atribDt&&e.papel==='rota');
   const jaAtrMotorista=new Set((escLinhas[motId]||[]).map(l=>l.rota_id));
@@ -1321,7 +1350,14 @@ function openAtrib(motId){
 
   selR.onchange=function(){
     const rId=parseInt(this.value);
-    document.getElementById('atrib-exp').innerHTML=rId?expertise(countRM(motId,rId)):'';
+    if(!rId){document.getElementById('atrib-exp').innerHTML='';return;}
+    document.getElementById('atrib-exp').innerHTML=expertise(countRM(motId,rId));
+    // Se rota tem motorista fixo diferente do atual, avisar
+    const rotaObj=DB.get('rotas').find(r=>r.id===rId);
+    if(rotaObj?.motorista_fixo&&rotaObj.motorista_fixo!==motId){
+      const mFixo=DB.get('motoristas').find(m=>m.id===rotaObj.motorista_fixo);
+      if(mFixo) document.getElementById('atrib-exp').innerHTML+=` <span style="color:#c9920a;font-size:.73rem">⚠️ Motorista fixo: ${nomeV(mFixo)}</span>`;
+    }
   };
   // Se motorista é agregado, pre-selecionar AGREGADO no veículo
   const motObj=DB.get('motoristas').find(x=>x.id===motId);
@@ -1333,9 +1369,13 @@ function openAtrib(motId){
   const selV=document.getElementById('atrib-vei');
   selV.innerHTML='<option value="">— Veículo —</option>';
   veiculosParaMot(motId).sort((a,b)=>a.frota.localeCompare(b.frota,'pt-BR',{numeric:true})).forEach(v=>selV.innerHTML+=`<option value="${v.id}">${v.frota} — ${v.modelo}</option>`);
-  // Auto-selecionar agg para agregados
+  // Auto-selecionar veículo: agg para agregados, ou veículo fixo se cadastrado
   const motParaAtrib=DB.get('motoristas').find(x=>x.id===motId);
-  if(motParaAtrib&&motParaAtrib.tipo==='Agregado') selV.value='0';
+  if(motParaAtrib&&motParaAtrib.tipo==='Agregado'){
+    selV.value='0';
+  } else if(motParaAtrib?.veiculo_fixo_id){
+    selV.value=motParaAtrib.veiculo_fixo_id;
+  }
   openModal('modal-atrib');
 }
 
@@ -1427,6 +1467,38 @@ async function delEscItem(){
   }catch(e){showToast('Erro ao remover.','danger');}
 }
 
+
+// ══════════ CONTROLE DE JORNADA ══════════
+// Calcula dias consecutivos trabalhados até uma data
+function diasConsecutivos(motId, ateData){
+  const escalas=DB.get('escalas').filter(e=>e.motorista_id===motId&&e.papel==='rota');
+  const diasComRota=new Set(escalas.filter(e=>e.papel==='rota').map(e=>e.data));
+  let count=0;
+  let d=ateData;
+  while(diasComRota.has(d)){
+    count++;
+    d=addDays(d,-1);
+  }
+  return count;
+}
+
+// Verifica se motorista precisa de folga obrigatória
+function precisaFolga(motId, dt){
+  const m=DB.get('motoristas').find(x=>x.id===motId);
+  if(!m||m.tipo==='Agregado') return false; // agregados sem limite
+  return diasConsecutivos(motId, addDays(dt,-1)) >= 6; // no 7º dia = folga obrigatória
+}
+
+// Alerta: 5 ou 6 dias seguidos
+function alertaJornada(motId, dt){
+  const m=DB.get('motoristas').find(x=>x.id===motId);
+  if(!m||m.tipo==='Agregado') return null;
+  const cons=diasConsecutivos(motId, addDays(dt,-1));
+  if(cons>=7) return {nivel:'critico', msg:`${cons}d seguidos — FOLGA OBRIGATÓRIA`};
+  if(cons>=5) return {nivel:'aviso', msg:`${cons}d seguidos — atenção`};
+  return null;
+}
+
 // ══════════ GERAR AUTO ══════════
 async function gerarEscalaAuto(){
   const dt=document.getElementById('escala-date')?.value||today();
@@ -1455,7 +1527,7 @@ async function gerarEscalaAuto(){
     });
 
     for(const r of rotasOrd){
-      const cand=disp.filter(m=>!motUsado[m.id]);
+      const cand=disp.filter(m=>!motUsado[m.id]&&!precisaFolga(m.id,dt));
       if(!cand.length) break;
       cand.sort((a,b)=>{
         const la=expLevel(countRM(a.id,r.id)),lb=expLevel(countRM(b.id,r.id));
@@ -1483,7 +1555,9 @@ async function gerarEscalaAuto(){
 }
 
 // ══════════ PREVISÃO ══════════
-let prevDias=7, prevVisao='motorista';
+let prevDias=7, prevVisao='motorista', prevStartDate=null;
+function navPrevisao(dir){prevStartDate=addDays(prevStartDate||today(),dir*prevDias);renderPrevisao();}
+function navPrevisaoHoje(){prevStartDate=null;renderPrevisao();}
 function setPrevDias(n,btn){
   prevDias=n;
   document.querySelectorAll('.prev-dias-btn').forEach(b=>{
@@ -1507,7 +1581,8 @@ function renderPrevisao(){
 }
 
 function renderPrevisaoMotorista(){
-  const dt=today();
+  const dt=prevStartDate||today();
+  document.getElementById('prev-data-label').textContent=fmtDate(dt);
   const days=[];
   for(let i=0;i<prevDias;i++)days.push(addDays(dt,i));
   const todosMotsAtivos=DB.get('motoristas').filter(m=>m.status==='Ativo');
@@ -1564,8 +1639,22 @@ function renderPrevisaoMotorista(){
             const r=rotas.find(x=>x.id===e.rota_id);
             content+=`<div class="day-event de-rota">${r?r.nome:'?'}</div>`;
           });
+          // Verificar pernoite: saiu num dia anterior com rota de duracao > 1
           if(!sp&&!sa&&!ss&&!sc&&!rotasEsc.length){
-            content=`<div style="color:var(--muted);font-size:.72rem;text-align:center">—</div>`;
+            let pernoite=false;
+            for(let back=1;back<=4;back++){
+              const dAntes=addDays(d,-back);
+              const escsAntes=escalas.filter(e=>e.data===dAntes&&e.motorista_id===m.id&&e.papel==='rota');
+              for(const ea of escsAntes){
+                const ra=rotas.find(x=>x.id===ea.rota_id);
+                if(ra&&(ra.duracao||1)>back){
+                  content=`<div class="day-event de-rota" style="opacity:.6">⛺ ${ra.nome}</div>`;
+                  pernoite=true; break;
+                }
+              }
+              if(pernoite) break;
+            }
+            if(!pernoite) content=`<div style="color:var(--muted);font-size:.72rem;text-align:center">—</div>`;
           }
         }
         html+=`<div class="prev-cell${isToday?' today':''}" style="flex-direction:column;align-items:flex-start;gap:2px">${content}</div>`;
@@ -1578,7 +1667,8 @@ function renderPrevisaoMotorista(){
 }
 
 function renderPrevisaoRota(){
-  const dt=today();
+  const dt=prevStartDate||today();
+  document.getElementById('prev-data-label').textContent=fmtDate(dt);
   const days=[];
   for(let i=0;i<prevDias;i++)days.push(addDays(dt,i));
   const todasRotas=DB.get('rotas').filter(r=>r.ativa);
@@ -1638,12 +1728,13 @@ function renderPrevisaoRota(){
     days.forEach(d=>{
       const isToday=d===dt;
       const deveRodar=!!rotasParaDt(d).find(x=>x.id===r.id);
-      // Escala direta do dia
-      const esc=escalas.find(e=>e.data===d&&e.rota_id===r.id&&e.papel==='rota');
+      // Todos os escalados nessa rota nesse dia
+      const escsRota=escalas.filter(e=>e.data===d&&e.rota_id===r.id&&e.papel==='rota');
+      const esc=escsRota[0]||null;
       // Pernoite: motorista saiu num dia anterior e ainda está na rota
       const dur=r.duracao||1;
       let emPernoite=null;
-      if(dur>1&&!esc){
+      if(dur>1&&!escsRota.length){
         for(let back=1;back<dur;back++){
           const dAnterior=addDays(d,-back);
           const escAnterior=escalas.find(e=>e.data===dAnterior&&e.rota_id===r.id&&e.papel==='rota');
@@ -1651,15 +1742,18 @@ function renderPrevisaoRota(){
         }
       }
 
-      const m=esc?mots.find(x=>x.id===esc.motorista_id):null;
-      const v=esc?veics.find(x=>x.id===esc.veiculo_id):null;
       const mPernoite=emPernoite?mots.find(x=>x.id===emPernoite.motorista_id):null;
 
       let content='';
-      if(esc&&m){
-        content=`<div class="day-event de-rota" style="font-size:.72rem">
-          <b>${nomeV(m)}</b>${v?` · <span style="opacity:.8">${v.frota==='agg'?'agg':v.frota}</span>`:''}
-        </div>`;
+      if(escsRota.length){
+        // Mostrar todos os motoristas escalados
+        content=escsRota.map(e=>{
+          const m=mots.find(x=>x.id===e.motorista_id);
+          const v=veics.find(x=>x.id===e.veiculo_id);
+          return`<div class="day-event de-rota" style="font-size:.72rem">
+            <b>${m?nomeV(m):'?'}</b>${v?` · <span style="opacity:.8">${v.frota==='agg'?'agg':v.frota}</span>`:''}
+          </div>`;
+        }).join('');
       } else if(emPernoite&&mPernoite){
         content=`<div class="day-event de-rota" style="font-size:.72rem;opacity:.7">
           ⛺ <b>${nomeV(mPernoite)}</b>
@@ -2364,7 +2458,14 @@ async function carregarDados(){
     })));
     // Filtrar veículo real com frota 'agg' (é virtual, representado pelo id=0)
     const veiculosFiltrados=veiculos.filter(v=>v.frota!=='agg'&&v.frota!=='AGG');
-    DB.set('veiculos', [{id:0,frota:'agg',placa:'',modelo:'AGREGADO',status:'ativo',manutObs:''},...veiculosFiltrados.map(v=>({...v, manutObs:v.manut_obs}))]);
+    DB.set('veiculos', [{id:0,frota:'agg',placa:'',modelo:'AGREGADO',status:'ativo',manutObs:''},...veiculosFiltrados.map(v=>({
+      ...v,
+      manutObs:v.manut_obs||'',
+      manutEntrada:v.manut_entrada||null,
+      manutSaida:v.manut_saida||null,
+      manutLevouId:v.manut_levou_id||null,
+      manutTrouxeId:v.manut_trouxe_id||null,
+    }))]);
     DB.set('rotas', rotas.map(r=>({...r,grupo:r.grupo||r.tipo_rota||'colaborador'})));
     DB.set('produtores', produtores);
     const motsCached=DB.get('motoristas'); // já normalizado acima
