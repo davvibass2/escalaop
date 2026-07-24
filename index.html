@@ -1214,10 +1214,12 @@ function renderEscalaPorMotorista(){
     const veicsAtvs=veiculosParaMot(m.id);
     const veiOpts=[...veicsAtvs].sort((a,b)=>a.frota.localeCompare(b.frota,'pt-BR',{numeric:true})).map(v=>`<option value="${v.id}" ${v.id===veicPrinc?'selected':''}>${v.frota} — ${v.modelo}</option>`).join('');
 
-    const rotasChips=linhas.map(l=>{
+    const isEnc=isEncadeada(m.id,dt);
+    const rotasChips=linhas.map((l,idx)=>{
       const r=rotas.find(x=>x.id===l.rota_id);
-      return`<span class="rota-chip assigned" onclick="openEditEsc(${l.esc_id})" title="Clique para editar">
-        ${r?r.nome:'?'}${r?` <span style="opacity:.55;font-size:.65rem">${r.intervalo}d</span>`:''}${r&&(r.duracao||1)>1?` <span class="b bp" style="padding:1px 4px;font-size:.62rem">⛺</span>`:''} <span style="opacity:.5;font-size:.65rem">✎</span>
+      const encBadge=isEnc&&idx===1?` <span class="b bp" style="padding:1px 4px;font-size:.62rem">⛺+1d</span>`:'';
+      return`<span class="rota-chip assigned" onclick="openEditEsc(${l.esc_id})" title="${isEnc&&idx===1?'Rota do dia seguinte (pernoite)':'Clique para editar'}">
+        ${r?r.nome:'?'}${r?` <span style="opacity:.55;font-size:.65rem">${r.intervalo}d</span>`:''}${encBadge} <span style="opacity:.5;font-size:.65rem">✎</span>
       </span>`;
     }).join('');
 
@@ -1468,6 +1470,38 @@ async function delEscItem(){
 }
 
 
+
+// ══════════ ROTA ENCADEADA ══════════
+// Detecta se o motorista está em modo encadeado num dia
+// (CNH E com 2 rotas escaladas no mesmo dia)
+function isEncadeada(motId, dt){
+  const m=DB.get('motoristas').find(x=>x.id===motId);
+  if(!m||m.cnh!=='E') return false;
+  const escalas=DB.get('escalas').filter(e=>e.data===dt&&e.motorista_id===motId&&e.papel==='rota');
+  return escalas.length>=2;
+}
+
+// Retorna as rotas encadeadas de um motorista num dia
+// [rota1 (hoje), rota2 (amanhã)]
+function rotasEncadeadas(motId, dt){
+  const escalas=DB.get('escalas').filter(e=>e.data===dt&&e.motorista_id===motId&&e.papel==='rota');
+  return escalas;
+}
+
+// Verifica se num determinado dia, o motorista está em pernoite de rota encadeada
+// (saiu no dia anterior com 2 rotas — a segunda é "hoje")
+function emPernoiteEncadeado(motId, dt){
+  const dAntes=addDays(dt,-1);
+  const m=DB.get('motoristas').find(x=>x.id===motId);
+  if(!m||m.cnh!=='E') return null;
+  const escalasOntem=DB.get('escalas').filter(e=>e.data===dAntes&&e.motorista_id===motId&&e.papel==='rota');
+  if(escalasOntem.length>=2){
+    // A segunda rota é a que ele faz hoje (no pernoite)
+    return escalasOntem[1];
+  }
+  return null;
+}
+
 // ══════════ CONTROLE DE JORNADA ══════════
 // Calcula dias consecutivos trabalhados até uma data
 function diasConsecutivos(motId, ateData){
@@ -1635,12 +1669,27 @@ function renderPrevisaoMotorista(){
           if(sa) content+=`<div class="day-event de-sobreaviso">📡 S.Aviso</div>`;
           if(ss) content+=`<div class="day-event" style="background:#e6f4ed;color:#1a5c36">🥛 Soro</div>`;
           if(sc) content+=`<div class="day-event" style="background:#fdecea;color:#7a1a1a">🆘 Socorro</div>`;
-          rotasEsc.forEach(e=>{
-            const r=rotas.find(x=>x.id===e.rota_id);
-            content+=`<div class="day-event de-rota">${r?r.nome:'?'}</div>`;
-          });
-          // Verificar pernoite: saiu num dia anterior com rota de duracao > 1
-          if(!sp&&!sa&&!ss&&!sc&&!rotasEsc.length){
+          // Verificar pernoite encadeado: ontem tinha 2 rotas → hoje é dia da rota 2
+          const encPernoite=emPernoiteEncadeado(m.id,d);
+          if(encPernoite&&!rotasEsc.length){
+            const rEnc=rotas.find(x=>x.id===encPernoite.rota_id);
+            content=`<div class="day-event de-rota" style="opacity:.85">⛺ ${rEnc?rEnc.nome:'?'}</div>`;
+          } else {
+            // Mostrar rotas escaladas (exceto rota 2 encadeada, que vai aparecer amanhã)
+            const isEncHoje=isEncadeada(m.id,d);
+            const rotasParaMostrar=isEncHoje?rotasEsc.slice(0,1):rotasEsc; // só rota 1 no dia de saída
+            rotasParaMostrar.forEach(e=>{
+              const r=rotas.find(x=>x.id===e.rota_id);
+              content+=`<div class="day-event de-rota">${r?r.nome:'?'}${isEncHoje?' <span style="font-size:.65rem;opacity:.7">+⛺</span>':''}</div>`;
+            });
+            if(isEncHoje){
+              // Mostrar rota 2 com label "amanhã"
+              const r2=rotasEsc[1]?rotas.find(x=>x.id===rotasEsc[1].rota_id):null;
+              if(r2) content+=`<div class="day-event de-rota" style="opacity:.65;font-size:.68rem">⛺ ${r2.nome}</div>`;
+            }
+          }
+          if(!sp&&!sa&&!ss&&!sc&&!content){
+            // Verificar pernoite por duração de rota
             let pernoite=false;
             for(let back=1;back<=4;back++){
               const dAntes=addDays(d,-back);
@@ -1729,7 +1778,20 @@ function renderPrevisaoRota(){
       const isToday=d===dt;
       const deveRodar=!!rotasParaDt(d).find(x=>x.id===r.id);
       // Todos os escalados nessa rota nesse dia
-      const escsRota=escalas.filter(e=>e.data===d&&e.rota_id===r.id&&e.papel==='rota');
+      // Rota encadeada: a rota 2 é escalada no dia anterior mas executada hoje
+      const dAnterior=addDays(d,-1);
+      const escsRotaHoje=escalas.filter(e=>e.data===d&&e.rota_id===r.id&&e.papel==='rota');
+      // Verificar se essa rota aparece como rota 2 encadeada de ontem
+      const escsEncadeadaOntem=escalas.filter(e=>{
+        if(e.data!==dAnterior||e.papel!=='rota') return false;
+        const motEnc=DB.get('motoristas').find(x=>x.id===e.motorista_id);
+        if(!motEnc||motEnc.cnh!=='E') return false;
+        const escsMotOntem=escalas.filter(x=>x.data===dAnterior&&x.motorista_id===e.motorista_id&&x.papel==='rota');
+        // É a segunda rota do motorista ontem?
+        return escsMotOntem.length>=2 && escsMotOntem[1].rota_id===r.id && e.rota_id===escsMotOntem[0].rota_id ? false :
+               escsMotOntem.length>=2 && escsMotOntem[1].rota_id===r.id && e.id===escsMotOntem[1].id;
+      });
+      const escsRota=[...escsRotaHoje,...escsEncadeadaOntem];
       const esc=escsRota[0]||null;
       // Pernoite: motorista saiu num dia anterior e ainda está na rota
       const dur=r.duracao||1;
