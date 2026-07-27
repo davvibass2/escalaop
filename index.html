@@ -184,21 +184,25 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 .bottom-nav{display:none}
 @media(max-width:700px){
 .prev-mot-sub{display:none}
-.prev-grupo-sep{font-size:.62rem !important;padding:2px 8px !important}
-.prev-cell{padding:3px 3px !important;font-size:.7rem !important}
-.prev-head-cell{padding:3px 3px !important;font-size:.65rem !important}
+.prev-grupo-sep{font-size:.6rem !important;padding:1px 6px !important}
+.prev-cell{padding:2px 2px !important;font-size:.66rem !important;min-height:24px !important}
+.prev-head-cell{padding:2px 2px !important;font-size:.62rem !important}
+.day-event{font-size:.62rem !important;padding:1px 3px !important}
+#prev-body{font-size:.66rem}
   header{padding-left:calc(10px + var(--safe-left));padding-right:calc(10px + var(--safe-right))}
   .logo{font-size:.9rem}
   .hdr-date{display:none}
   .nav-tabs{display:none}
   .bottom-nav{
     display:flex;position:fixed;bottom:0;left:0;right:0;
-    background:var(--navy);padding:4px 0;
-    padding-bottom:calc(4px + var(--safe-bottom));
-    box-shadow:0 -2px 12px rgba(0,0,0,.2);z-index:100;
+    background:rgba(27,58,75,0.95);padding:2px 0;
+    padding-bottom:calc(2px + var(--safe-bottom));
+    box-shadow:0 -1px 8px rgba(0,0,0,.15);z-index:100;
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border-top:1px solid rgba(255,255,255,.08);
   }
-  .bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;padding:4px 2px;font-size:.58rem;font-weight:500;touch-action:manipulation;min-height:48px}
-  .bnav-btn .bnav-icon{font-size:1.25rem;line-height:1.2}
+  .bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;background:none;border:none;color:rgba(255,255,255,.45);cursor:pointer;padding:3px 2px;font-size:.55rem;font-weight:500;touch-action:manipulation;min-height:40px}
+  .bnav-btn .bnav-icon{font-size:1.1rem;line-height:1.2}
   .bnav-btn.active{color:var(--amber)}
   main{padding:12px 10px;padding-left:calc(10px + var(--safe-left));padding-right:calc(10px + var(--safe-right));padding-bottom:calc(76px + var(--safe-bottom))}
   .modal{border-radius:20px 20px 0 0}
@@ -1775,7 +1779,7 @@ function renderPrevisaoRota(){
     return a.nome.localeCompare(b.nome,'pt-BR');
   });
 
-  const colW=`170px ${days.map(()=>'1fr').join(' ')}`;
+  const colW=`100px ${days.map(()=>'1fr').join(' ')}`;
   let html=`<div style="display:grid;grid-template-columns:${colW};min-width:${200+days.length*110}px">`;
 
   // Cabeçalho
@@ -1799,8 +1803,10 @@ function renderPrevisaoRota(){
     }
 
     const rotaJulieta=r.rota_vinculada_id?todasRotas.find(x=>x.id===r.rota_vinculada_id):null;
-    html+=`<div class="prev-cell sticky-col" style="font-weight:600;font-size:.81rem;border-right:1px solid var(--border);flex-direction:column;align-items:flex-start;padding:4px 8px">
-      <span>${rotaJulieta?'↳ ':''}<b>${r.nome}</b> <span style="font-weight:400;font-size:.68rem;color:var(--muted)">${r.intervalo}d${(r.duracao||1)>1?' ⛺':''}${rotaJulieta?` → ${rotaJulieta.nome}`:''}</span></span>
+    const grpRota=grupoRota(r);
+    const bolinhaRota=grpRota===2?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#c9920a;margin-right:4px;flex-shrink:0"></span>':grpRota===0?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#7B3F9E;margin-right:4px;flex-shrink:0"></span>':'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--navy);margin-right:4px;flex-shrink:0"></span>';
+    html+=`<div class="prev-cell sticky-col" style="font-weight:600;font-size:.79rem;border-right:1px solid var(--border);align-items:center;padding:3px 6px;gap:2px">
+      ${bolinhaRota}<span>${rotaJulieta?'↳ ':''}<b>${r.nome}</b> <span style="font-weight:400;font-size:.65rem;color:var(--muted)">${r.intervalo}d${(r.duracao||1)>1?' ⛺':''}${rotaJulieta?` →`:''}</span></span>
     </div>`;
 
     days.forEach(d=>{
@@ -1877,6 +1883,15 @@ function preencherMotFixoSelect(selId){
   [...DB.get('motoristas')].sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).forEach(m=>{
     sel.innerHTML+=`<option value="${m.id}" ${m.id===selId?'selected':''}>${nomeV(m)} (${m.tipo})</option>`;
   });
+  // Popular select de rota vinculada (todas as rotas ativas)
+  const selVinc=document.getElementById('rot-vinculada');
+  if(selVinc){
+    const valorAtual=selVinc.value;
+    selVinc.innerHTML='<option value="">— Nenhuma —</option>';
+    [...DB.get('rotas')].filter(r=>r.ativa).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'))
+      .forEach(r=>selVinc.innerHTML+=`<option value="${r.id}">${r.nome}</option>`);
+    selVinc.value=valorAtual;
+  }
 }
 
 function renderMotoristas(){
