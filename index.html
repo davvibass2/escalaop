@@ -158,7 +158,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 /* PREVISÃO */
 .prev-head-cell{padding:5px 6px;border-right:1px solid var(--border);font-size:.71rem;font-weight:700;color:var(--muted);text-align:center;background:var(--bg)}
 .prev-head-cell.today{background:#fff8e6;color:var(--amber)}
-.prev-cell{padding:4px 6px;border-right:1px solid var(--border);font-size:.79rem;min-height:32px;display:flex;align-items:center}
+.prev-cell{padding:4px 6px;border-right:1px solid var(--border);font-size:.79rem;min-height:32px;display:flex;align-items:center}.prev-cell.sticky-col{position:sticky;left:0;z-index:10;background:var(--surface);box-shadow:2px 0 4px rgba(0,0,0,.06)}.prev-head-cell.sticky-col{position:sticky;left:0;z-index:11;background:var(--bg)}
 .prev-cell.today{background:#fffbf2}
 .day-event{font-size:.69rem;padding:1px 5px;border-radius:4px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
 .de-rota{background:#d1e7dd;color:#0a5c36}
@@ -183,6 +183,10 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 /* ══ BOTTOM NAV mobile ══ */
 .bottom-nav{display:none}
 @media(max-width:700px){
+.prev-mot-sub{display:none}
+.prev-grupo-sep{font-size:.62rem !important;padding:2px 8px !important}
+.prev-cell{padding:3px 3px !important;font-size:.7rem !important}
+.prev-head-cell{padding:3px 3px !important;font-size:.65rem !important}
   header{padding-left:calc(10px + var(--safe-left));padding-right:calc(10px + var(--safe-right))}
   .logo{font-size:.9rem}
   .hdr-date{display:none}
@@ -541,6 +545,12 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
       </select>
     </div>
   </div>
+  <div class="fg">
+    <label>🔗 Transborda para Julieta <span style="color:var(--muted);font-size:.72rem">(opcional — rota CNH D que despeja na Julieta)</span></label>
+    <select id="rot-vinculada">
+      <option value="">— Nenhuma —</option>
+    </select>
+  </div>
   <div class="mf">
     <button class="btn btn-g" onclick="closeModal('modal-rota')">Cancelar</button>
     <button class="btn btn-p" onclick="saveRota()">Salvar</button>
@@ -812,7 +822,8 @@ function renderDashboard(){
     </div>
     <div style="background:var(--surface);border-radius:var(--r2);padding:16px 18px;box-shadow:var(--sh);border:1px solid var(--border);border-left:4px solid var(--yellow)">
       <div style="font-size:.71rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Férias / Afastados</div>
-      <div style="font-size:2rem;font-weight:700;color:var(--yellow)">${mots.filter(m=>m.status!=='Ativo').length}</div>
+      <div style="font-size:2rem;font-weight:700;color:var(--yellow)">${mots.filter(m=>temBloqueioData(m.id,dt)).length}</div>
+      <div style="font-size:.74rem;color:var(--muted);margin-top:4px">${mots.filter(m=>temBloqueioData(m.id,dt)).map(m=>m.apelido||m.nome.split(' ')[0]).join(', ')||'Nenhum'}</div>
     </div>
     <div style="background:var(--surface);border-radius:var(--r2);padding:16px 18px;box-shadow:var(--sh);border:1px solid var(--border);border-left:4px solid var(--purple)">
       <div style="font-size:.71rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Veículos em Manutenção</div>
@@ -1534,9 +1545,10 @@ function alertaJornada(motId, dt){
 // ══════════ GERAR AUTO ══════════
 async function gerarEscalaAuto(){
   const dt=document.getElementById('escala-date')?.value||today();
-  const rotasHoje=rotasParaDt(dt);
-  const disp=motDisp(dt);
-  const veics=veiculosAtivos();
+  const rotasHoje=DB.get('rotas').filter(r=>r.ativa==1); // todas as rotas ativas
+  const disp=motDisp(dt).filter(m=>!precisaFolga(m.id,dt));
+  
+  if(!rotasHoje.length){showToast('Nenhuma rota cadastrada.','warn');return;}
   if(!disp.length){showToast('Nenhum motorista disponível.','warn');return;}
 
   const escalas=DB.get('escalas');
@@ -1546,11 +1558,11 @@ async function gerarEscalaAuto(){
   escalas.filter(e=>e.data>=recente&&e.papel==='rota').forEach(e=>{if(diasTrab[e.motorista_id]!==undefined)diasTrab[e.motorista_id]++;});
 
   try{
-    // Remove escalas de rota do dia no Supabase
     await supa('escalas','DELETE',null,`?data=eq.${dt}&papel=eq.rota`);
     let novasEscs=DB.get('escalas').filter(e=>!(e.data===dt&&e.papel==='rota'));
     const rotas=DB.get('rotas');
-    const motUsado={},veiUsado={};
+    const motUsado={};
+    const veiUsado={};
 
     const rotasOrd=[...rotasHoje].sort((a,b)=>{
       const da=a.ultima?diffDays(a.ultima,dt)-a.intervalo:99;
@@ -1558,32 +1570,38 @@ async function gerarEscalaAuto(){
       return db2-da;
     });
 
+    let escaladas=0;
     for(const r of rotasOrd){
-      const cand=disp.filter(m=>!motUsado[m.id]&&!precisaFolga(m.id,dt));
+      const cand=disp.filter(m=>!motUsado[m.id]);
       if(!cand.length) break;
+
       cand.sort((a,b)=>{
         const la=expLevel(countRM(a.id,r.id)),lb=expLevel(countRM(b.id,r.id));
         if(lb!==la)return lb-la;
         return(diasTrab[a.id]||0)-(diasTrab[b.id]||0);
       });
-      const mot=cand[0]; motUsado[mot.id]=true;
-      const vei=veics.find(v=>!veiUsado[v.id]);
+
+      const mot=cand[0];
+      motUsado[mot.id]=true;
+
+      // Veículo correto por tipo de motorista
+      const veicsDisp=veiculosParaMot(mot.id).filter(v=>!veiUsado[v.id]);
+      const vei=veicsDisp[0]||null;
       if(vei) veiUsado[vei.id]=true;
+
       const novaEsc={data:dt,rota_id:r.id,motorista_id:mot.id,veiculo_id:vei?vei.id:null,papel:'rota'};
       const created=await syncEscala(novaEsc,true);
-      if(created) novasEscs.push(created);
+      if(created){novasEscs.push(created);escaladas++;}
+
       const ri=rotas.findIndex(x=>x.id===r.id);
       if(ri>=0){rotas[ri].ultima=dt; await syncRota(rotas[ri],false);}
     }
 
     DB.set('escalas',novasEscs);
     DB.set('rotas',rotas);
-    // Navegar para escala
-    document.querySelector('.nav-tab[onclick*="escala"]')?.click();
-    document.getElementById('escala-date').value=dt;
     renderEscala();
-    showToast('Escala gerada! Revise e confirme.','info');
-  }catch(e){showToast('Erro ao gerar escala.','danger');console.error(e);}
+    showToast(`Escala gerada: ${escaladas} de ${rotasOrd.length} rotas atribuídas. Revise e confirme.`,'info');
+  }catch(e){showToast('Erro ao gerar escala: '+e.message,'danger');console.error(e);}
 }
 
 // ══════════ PREVISÃO ══════════
@@ -1644,9 +1662,9 @@ function renderPrevisaoMotorista(){
     // Separador de grupo
     html+=`<div style="grid-column:1/-1;background:${bg};padding:6px 14px;font-size:.72rem;font-weight:700;letter-spacing:.5px;color:${cor}">${label}</div>`;
     mots.forEach(m=>{
-      html+=`<div class="prev-cell" style="font-weight:600;font-size:.82rem;border-right:1px solid var(--border);flex-direction:column;align-items:flex-start">
+      html+=`<div class="prev-cell sticky-col" style="font-weight:600;font-size:.82rem;border-right:1px solid var(--border);flex-direction:column;align-items:flex-start">
         <span>${nomeV(m)}</span>
-        <span style="font-weight:400;font-size:.7rem;color:var(--muted)">${tipoV(m)} · CNH ${m.cnh||'D'}</span>
+        <span class="prev-mot-sub" style="font-weight:400;font-size:.7rem;color:var(--muted)">${tipoV(m)} · CNH ${m.cnh||'D'}</span>
       </div>`;
       days.forEach(d=>{
         const isToday=d===dt;
@@ -1742,6 +1760,18 @@ function renderPrevisaoRota(){
   const rotasOrdenadas=[...todasRotas].sort((a,b)=>{
     const ga=grupoRota(a), gb=grupoRota(b);
     if(ga!==gb) return ga-gb;
+    // Agrupar: rotas vinculadas ficam logo abaixo da sua Julieta
+    const aVinc=a.rota_vinculada_id||0;
+    const bVinc=b.rota_vinculada_id||0;
+    // Se a é vinculada a b, a vem depois de b
+    if(aVinc===b.id) return 1;
+    if(bVinc===a.id) return -1;
+    // Se ambas vinculadas à mesma julieta, ficam juntas
+    if(aVinc&&aVinc===bVinc) return a.nome.localeCompare(b.nome,'pt-BR');
+    // Motorista fixo
+    const maFixo=a.mot_fixo_id||0;
+    const mbFixo=b.mot_fixo_id||0;
+    if(maFixo!==mbFixo) return maFixo-mbFixo;
     return a.nome.localeCompare(b.nome,'pt-BR');
   });
 
@@ -1749,7 +1779,7 @@ function renderPrevisaoRota(){
   let html=`<div style="display:grid;grid-template-columns:${colW};min-width:${200+days.length*110}px">`;
 
   // Cabeçalho
-  html+=`<div class="prev-head-cell" style="text-align:left;padding-left:14px">Rota</div>`;
+  html+=`<div class="prev-head-cell sticky-col" style="text-align:left;padding-left:14px">Rota</div>`;
   days.forEach(d=>{
     const dow=new Date(d+'T12:00:00').getDay();
     const isToday=d===dt;
@@ -1768,8 +1798,9 @@ function renderPrevisaoRota(){
       html+=`<div style="grid-column:1/-1;background:${g===0?'#fff8e6':g===1?'#e8eef2':'#f3e8fa'};padding:6px 14px;font-size:.72rem;font-weight:700;letter-spacing:.5px;color:${g===0?'#a07010':g===1?'var(--navy)':'var(--purple)'};">${grupoLabels[g]}</div>`;
     }
 
-    html+=`<div class="prev-cell" style="font-weight:600;font-size:.81rem;border-right:1px solid var(--border);flex-direction:column;align-items:flex-start;padding:4px 8px">
-      <span>${r.nome} <span style="font-weight:400;font-size:.68rem;color:var(--muted)">${r.intervalo}d${(r.duracao||1)>1?` ⛺`:''}</span></span>
+    const rotaJulieta=r.rota_vinculada_id?todasRotas.find(x=>x.id===r.rota_vinculada_id):null;
+    html+=`<div class="prev-cell sticky-col" style="font-weight:600;font-size:.81rem;border-right:1px solid var(--border);flex-direction:column;align-items:flex-start;padding:4px 8px">
+      <span>${rotaJulieta?'↳ ':''}<b>${r.nome}</b> <span style="font-weight:400;font-size:.68rem;color:var(--muted)">${r.intervalo}d${(r.duracao||1)>1?' ⛺':''}${rotaJulieta?` → ${rotaJulieta.nome}`:''}</span></span>
     </div>`;
 
     days.forEach(d=>{
@@ -2057,6 +2088,7 @@ async function editRot(id){
   document.getElementById('rot-intervalo').value=r.intervalo;
   document.getElementById('rot-duracao').value=r.duracao||1;
   if(document.getElementById('rot-grupo'))document.getElementById('rot-grupo').value=r.grupo||'colaborador';
+  if(document.getElementById('rot-vinculada'))document.getElementById('rot-vinculada').value=r.rota_vinculada_id||'';
   document.getElementById('rot-grupo').value=r.grupo||r.tipo_rota||'colaborador';
   document.getElementById('rot-ultima').value=r.ultima||'';
   document.getElementById('rot-ativa').value=r.ativa;
