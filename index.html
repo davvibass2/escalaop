@@ -1790,17 +1790,8 @@ function renderPrevisaoRota(){
     html+=`<div class="prev-head-cell${isToday?' today':''}">${dowNames[dow]}<br><b>${fmtDateShort(d)}</b></div>`;
   });
 
-  let grupoAtual=-1;
-  const grupoLabels=['🚛 Com Julieta (CNH E)','🔵 Frota Própria','🟡 Agregados'];
-
   rotasOrdenadas.forEach(r=>{
     const g=grupoRota(r);
-    // Separador de grupo
-    if(g!==grupoAtual){
-      grupoAtual=g;
-      const cols=1+days.length;
-      html+=`<div style="grid-column:1/-1;background:${g===0?'#fff8e6':g===1?'#e8eef2':'#f3e8fa'};padding:6px 14px;font-size:.72rem;font-weight:700;letter-spacing:.5px;color:${g===0?'#a07010':g===1?'var(--navy)':'var(--purple)'};">${grupoLabels[g]}</div>`;
-    }
 
     const rotaJulieta=r.rota_vinculada_id?todasRotas.find(x=>x.id===r.rota_vinculada_id):null;
     const grpRota=grupoRota(r);
