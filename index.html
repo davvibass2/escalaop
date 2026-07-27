@@ -549,11 +549,12 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
       </select>
     </div>
   </div>
-  <div class="fg">
-    <label>🔗 Transborda para Julieta <span style="color:var(--muted);font-size:.72rem">(opcional — rota CNH D que despeja na Julieta)</span></label>
-    <select id="rot-vinculada">
-      <option value="">— Nenhuma —</option>
-    </select>
+  <div class="form-row">
+    <div class="fg"><label>Ordem na Previsão</label><input type="number" id="rot-ordem" min="1" max="99" placeholder="Ex: 1, 2, 3..." style="width:100%"></div>
+    <div class="fg">
+      <label>🔗 Transborda para Julieta <span style="color:var(--muted);font-size:.72rem">(opcional)</span></label>
+      <select id="rot-vinculada"><option value="">— Nenhuma —</option></select>
+    </div>
   </div>
   <div class="mf">
     <button class="btn btn-g" onclick="closeModal('modal-rota')">Cancelar</button>
@@ -1650,8 +1651,8 @@ function renderPrevisaoMotorista(){
     {label:'🟡 Agregados',     cor:'#7B3F9E',    bg:'#f3e8fa', mots:todosMotsAtivos.filter(m=>m.tipo==='Agregado').sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'))},
   ];
 
-  const colW=`180px ${days.map(()=>'1fr').join(' ')}`;
-  let html=`<div style="display:grid;grid-template-columns:${colW};min-width:${180+days.length*100}px">`;
+  const colW=`200px ${days.map(()=>'minmax(65px,1fr)').join(' ')}`;
+  let html=`<div style="display:grid;grid-template-columns:${colW};min-width:${200+days.length*70}px">`;
 
   // Cabeçalho
   html+=`<div class="prev-head-cell" style="text-align:left;padding-left:14px">Motorista</div>`;
@@ -1761,26 +1762,11 @@ function renderPrevisaoRota(){
     return 1;
   }
 
-  const rotasOrdenadas=[...todasRotas].sort((a,b)=>{
-    const ga=grupoRota(a), gb=grupoRota(b);
-    if(ga!==gb) return ga-gb;
-    // Agrupar: rotas vinculadas ficam logo abaixo da sua Julieta
-    const aVinc=a.rota_vinculada_id||0;
-    const bVinc=b.rota_vinculada_id||0;
-    // Se a é vinculada a b, a vem depois de b
-    if(aVinc===b.id) return 1;
-    if(bVinc===a.id) return -1;
-    // Se ambas vinculadas à mesma julieta, ficam juntas
-    if(aVinc&&aVinc===bVinc) return a.nome.localeCompare(b.nome,'pt-BR');
-    // Motorista fixo
-    const maFixo=a.mot_fixo_id||0;
-    const mbFixo=b.mot_fixo_id||0;
-    if(maFixo!==mbFixo) return maFixo-mbFixo;
-    return a.nome.localeCompare(b.nome,'pt-BR');
-  });
+  // Ordenar por campo 'ordem' definido no cadastro
+  const rotasOrdenadas=[...todasRotas].sort((a,b)=>(a.ordem??99)-(b.ordem??99));
 
-  const colW=`100px ${days.map(()=>'1fr').join(' ')}`;
-  let html=`<div style="display:grid;grid-template-columns:${colW};min-width:${200+days.length*110}px">`;
+  const colW=`90px ${days.map(()=>'minmax(55px,1fr)').join(' ')}`;
+  let html=`<div style="display:grid;grid-template-columns:${colW};min-width:${90+days.length*60}px">`;
 
   // Cabeçalho
   html+=`<div class="prev-head-cell sticky-col" style="text-align:left;padding-left:14px">Rota</div>`;
@@ -1796,7 +1782,7 @@ function renderPrevisaoRota(){
     const rotaJulieta=r.rota_vinculada_id?todasRotas.find(x=>x.id===r.rota_vinculada_id):null;
     const grpRota=grupoRota(r);
     const bolinhaRota=grpRota===2?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#c9920a;margin-right:4px;flex-shrink:0"></span>':grpRota===0?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#7B3F9E;margin-right:4px;flex-shrink:0"></span>':'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--navy);margin-right:4px;flex-shrink:0"></span>';
-    html+=`<div class="prev-cell sticky-col" style="font-weight:600;font-size:.79rem;border-right:1px solid var(--border);align-items:center;padding:3px 6px;gap:2px">
+    html+=`<div class="prev-cell sticky-col" style="font-weight:600;font-size:.78rem;border-right:1px solid var(--border);align-items:center;padding:3px 6px;gap:2px;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis">
       ${bolinhaRota}<span>${rotaJulieta?'↳ ':''}<b>${r.nome}</b> <span style="font-weight:400;font-size:.65rem;color:var(--muted)">${r.intervalo}d${(r.duracao||1)>1?' ⛺':''}${rotaJulieta?` →`:''}</span></span>
     </div>`;
 
@@ -2095,6 +2081,7 @@ async function editRot(id){
   document.getElementById('rot-duracao').value=r.duracao||1;
   if(document.getElementById('rot-grupo'))document.getElementById('rot-grupo').value=r.grupo||'colaborador';
   if(document.getElementById('rot-vinculada'))document.getElementById('rot-vinculada').value=r.rota_vinculada_id||'';
+  if(document.getElementById('rot-ordem'))document.getElementById('rot-ordem').value=r.ordem||'';
   document.getElementById('rot-grupo').value=r.grupo||r.tipo_rota||'colaborador';
   document.getElementById('rot-ultima').value=r.ultima||'';
   document.getElementById('rot-ativa').value=r.ativa;
@@ -2558,7 +2545,7 @@ async function carregarDados(){
       manutLevouId:v.manut_levou_id||null,
       manutTrouxeId:v.manut_trouxe_id||null,
     }))]);
-    DB.set('rotas', rotas.map(r=>({...r,grupo:r.grupo||r.tipo_rota||'colaborador'})));
+    DB.set('rotas', rotas.map(r=>({...r,grupo:r.grupo||r.tipo_rota||'colaborador',ordem:r.ordem??99})));
     DB.set('produtores', produtores);
     const motsCached=DB.get('motoristas'); // já normalizado acima
     DB.set('escalas', escalas.map(e=>{
