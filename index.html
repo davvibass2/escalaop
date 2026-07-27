@@ -320,7 +320,7 @@ async function submitCL(){
       perfil:tp,tacografo:S.taco||null,km:S.km?Number(S.km):null,
       motorista_relacionado:S.motRel||null,itens:ip,
       observacoes_gerais:S.obsG||null,fotos:fu,
-      status:(tp==='motorista'&&temNOK)?'aprovado':'pendente',
+      status:'pendente',
       encaminhado_mecanico:(tp==='motorista'&&temNOK),
       encaminhado_em:(tp==='motorista'&&temNOK)?new Date().toISOString():null
     };
@@ -866,7 +866,30 @@ function rSvAv(){
   return`<h1 class="t">Avaliações de motoristas</h1>
     <div class="erow" style="margin-bottom:14px;"><button class="ba" onclick="expAvXL()">⬇ Baixar Excel</button><button class="ba" onclick="expAvPPTX()">⬇ Baixar PowerPoint</button></div>
     <div class="cc"><h3>Ranking</h3><table class="ts"><thead><tr><th>#</th><th>Motorista</th><th>Média</th><th>Classe</th><th>Aval.</th></tr></thead><tbody>${rk.map((r,i)=>{const cl=clsNota(r.med);return`<tr><td style="font-weight:700;color:var(--muted);">${i+1}</td><td>${r.nome}</td><td style="font-weight:700;color:${cl.c}">${r.med.toFixed(1)}</td><td style="font-weight:700;color:${cl.c}">${cl.l}</td><td>${r.q}</td></tr>`;}).join('')}</tbody></table></div>
-    <div class="cc"><h3>Recentes</h3>${h.slice(0,15).map(a=>{const cl=a.nota_final!==null?clsNota(a.nota_final):null;return`<div class="drow" style="flex-direction:column;align-items:flex-start;gap:2px;"><div style="display:flex;justify-content:space-between;width:100%;"><span style="font-weight:600;">${a.motorista_nome}</span>${cl?`<span style="font-weight:700;color:${cl.c}">${a.nota_final.toFixed(1)} — ${cl.l}</span>`:''}</div><div style="font-size:12px;color:var(--muted);">${fmtD(a.criado_em)} · ${a.inspetor_nome}${a.veiculo_placa?' · '+a.veiculo_placa:''}${a.rota?' · '+a.rota:''}</div></div>`;}).join('')}</div>`;
+    <div class="cc"><h3>Avaliações recentes</h3>${h.slice(0,20).map(a=>{
+      const cl=a.nota_final!==null?clsNota(a.nota_final):null;
+      const isDelConf=S.avConfirmDel===a.id;
+      return`<div style="padding:10px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:14px;">${a.motorista_nome}</div>
+            <div style="font-size:12px;color:var(--muted);">${fmtD(a.criado_em)} · ${a.inspetor_nome}${a.codigo?' · '+a.codigo:''}${a.veiculo_placa?' · '+a.veiculo_placa:''}${a.rota?' · '+a.rota:''}</div>
+            ${a.km_total?`<div style="font-size:12px;color:var(--muted);">🛣 ${a.km_total} km${a.consumo_km_l?' · '+a.consumo_km_l+' km/L':''}</div>`:''}
+            ${a.duracao?`<div style="font-size:12px;color:var(--muted);">⏱ ${a.duracao}</div>`:''}
+          </div>
+          ${cl?`<div style="text-align:right;margin-left:10px;"><div style="font-weight:700;color:${cl.c};font-size:16px;">${a.nota_final.toFixed(1)}</div><div style="font-size:11px;font-weight:700;color:${cl.c};">${cl.l}</div></div>`:''}
+        </div>
+        ${isDelConf
+          ?`<div style="background:#FBE7E4;border-radius:8px;padding:10px;margin-top:7px;">
+              <div style="font-size:13px;font-weight:600;color:var(--nok);margin-bottom:7px;">Excluir esta avaliação?</div>
+              <div style="display:flex;gap:7px;"><button class="bp" style="background:var(--nok);" onclick="confirmDelAv()">Sim, excluir</button><button class="bs" style="margin-top:0;" onclick="SS({avConfirmDel:null})">Cancelar</button></div>
+            </div>`
+          :`<div style="display:flex;gap:7px;margin-top:7px;">
+              <button class="ib" onclick="editAvSv(S.avHist.find(x=>x.id==='${a.id}'))">✏️ Editar</button>
+              <button class="ib d" onclick="delAv('${a.id}')">Excluir</button>
+            </div>`}
+      </div>`;
+    }).join('')}</div>`;
 }
 function rInsp(){
   if(S.avScreen==='ok')return`<div class="sw"><div class="stamp" style="border-color:var(--ok);color:var(--ok);">ENVIADA</div><div class="sd">Avaliação salva.</div><button class="bp" onclick="SS({avScreen:'inicio'})">Nova avaliação</button><button class="bs" onclick="SS({avScreen:'historico'})">Ver histórico</button></div>`;
