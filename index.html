@@ -1651,8 +1651,8 @@ function renderPrevisaoMotorista(){
     {label:'🟡 Agregados',     cor:'#7B3F9E',    bg:'#f3e8fa', mots:todosMotsAtivos.filter(m=>m.tipo==='Agregado').sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'))},
   ];
 
-  const colW=`200px ${days.map(()=>'minmax(65px,1fr)').join(' ')}`;
-  let html=`<div style="display:grid;grid-template-columns:${colW};min-width:${200+days.length*70}px">`;
+  const colW=`auto ${days.map(()=>'auto').join(' ')}`;
+  let html=`<div style="display:grid;grid-template-columns:${colW}">`;
 
   // Cabeçalho
   html+=`<div class="prev-head-cell" style="text-align:left;padding-left:14px">Motorista</div>`;
@@ -1765,8 +1765,8 @@ function renderPrevisaoRota(){
   // Ordenar por campo 'ordem' definido no cadastro
   const rotasOrdenadas=[...todasRotas].sort((a,b)=>(a.ordem??99)-(b.ordem??99));
 
-  const colW=`90px ${days.map(()=>'minmax(55px,1fr)').join(' ')}`;
-  let html=`<div style="display:grid;grid-template-columns:${colW};min-width:${90+days.length*60}px">`;
+  const colW=`auto ${days.map(()=>'auto').join(' ')}`;
+  let html=`<div style="display:grid;grid-template-columns:${colW}">`;
 
   // Cabeçalho
   html+=`<div class="prev-head-cell sticky-col" style="text-align:left;padding-left:14px">Rota</div>`;
@@ -1782,7 +1782,7 @@ function renderPrevisaoRota(){
     const rotaJulieta=r.rota_vinculada_id?todasRotas.find(x=>x.id===r.rota_vinculada_id):null;
     const grpRota=grupoRota(r);
     const bolinhaRota=grpRota===2?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#c9920a;margin-right:4px;flex-shrink:0"></span>':grpRota===0?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#7B3F9E;margin-right:4px;flex-shrink:0"></span>':'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--navy);margin-right:4px;flex-shrink:0"></span>';
-    html+=`<div class="prev-cell sticky-col" style="font-weight:600;font-size:.78rem;border-right:1px solid var(--border);align-items:center;padding:3px 6px;gap:2px;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis">
+    html+=`<div class="prev-cell sticky-col" style="font-weight:600;font-size:.78rem;border-right:1px solid var(--border);align-items:center;padding:3px 6px;gap:2px">
       ${bolinhaRota}<span>${rotaJulieta?'↳ ':''}<b>${r.nome}</b> <span style="font-weight:400;font-size:.65rem;color:var(--muted)">${r.intervalo}d${(r.duracao||1)>1?' ⛺':''}${rotaJulieta?` →`:''}</span></span>
     </div>`;
 
