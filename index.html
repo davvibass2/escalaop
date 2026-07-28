@@ -1495,13 +1495,9 @@ function rotasEncadeadas(motId, dt){
 // (saiu no dia anterior com 2 rotas — a segunda é "hoje")
 function emPernoiteEncadeado(motId, dt){
   const dAntes=addDays(dt,-1);
-  const m=DB.get('motoristas').find(x=>x.id===motId);
-  if(!m||m.cnh!=='E') return null;
   const escalasOntem=DB.get('escalas').filter(e=>e.data===dAntes&&e.motorista_id===motId&&e.papel==='rota');
-  if(escalasOntem.length>=2){
-    // A segunda rota é a que ele faz hoje (no pernoite)
-    return escalasOntem[1];
-  }
+  // Só é encadeada se tinha EXATAMENTE 2 rotas ontem
+  if(escalasOntem.length===2) return escalasOntem[1];
   return null;
 }
 
@@ -1795,7 +1791,12 @@ function renderPrevisaoRota(){
       const escsEncadeadaOntem=escalas.filter(e=>{
         if(e.data!==dAnterior||e.papel!=='rota') return false;
         const escsMotOntem=escalas.filter(x=>x.data===dAnterior&&x.motorista_id===e.motorista_id&&x.papel==='rota');
-        return escsMotOntem.length>=2 && escsMotOntem[1].rota_id===r.id && e.id===escsMotOntem[1].id;
+        // Só é encadeada se o motorista tinha EXATAMENTE 2 rotas ontem
+        // E esta escala é a SEGUNDA rota (não a primeira)
+        if(escsMotOntem.length!==2) return false;
+        if(e.id!==escsMotOntem[1].id) return false;
+        // E a segunda rota é esta rota atual
+        return escsMotOntem[1].rota_id===r.id;
       });
       const escsRota=[...escsRotaHoje,...escsEncadeadaOntem];
 
