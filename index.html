@@ -337,10 +337,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
     <div class="ph">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <div class="pt">📆 Escala do Dia — <span id="escala-date-label"></span></div>
-        <div style="display:flex;border:1px solid var(--border);border-radius:var(--r1);overflow:hidden">
-          <button id="esc-vis-mot" onclick="setEscalaVisao('motorista',this)" style="padding:5px 12px;font-size:.79rem;font-weight:600;border:none;cursor:pointer;background:var(--navy);color:#fff">Por Motorista</button>
-          <button id="esc-vis-rot" onclick="setEscalaVisao('rota',this)" style="padding:5px 12px;font-size:.79rem;font-weight:600;border:none;cursor:pointer;background:none;color:var(--muted)">Por Rota</button>
-        </div>
+
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <input type="date" id="escala-date" onchange="renderEscala()">
@@ -990,17 +987,9 @@ let escLinhas={};
 let _sobreAvisoIds=[];
 let escalaVisao='motorista'; // 'motorista' ou 'rota'
 
-function setEscalaVisao(v, btn){
-  escalaVisao=v;
-  document.getElementById('esc-vis-mot').style.background = v==='motorista'?'var(--navy)':'none';
-  document.getElementById('esc-vis-mot').style.color      = v==='motorista'?'#fff':'var(--muted)';
-  document.getElementById('esc-vis-rot').style.background = v==='rota'?'var(--navy)':'none';
-  document.getElementById('esc-vis-rot').style.color      = v==='rota'?'#fff':'var(--muted)';
-  renderEscala();
-}
+
 
 function renderEscala(){
-  if(escalaVisao==='rota') return renderEscalaPorRota();
   renderEscalaPorMotorista();
 }
 
