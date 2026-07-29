@@ -546,13 +546,6 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
       </select>
     </div>
   </div>
-  <div class="form-row">
-    <div class="fg"><label>Ordem na Previsão</label><input type="number" id="rot-ordem" min="1" max="99" placeholder="Ex: 1, 2, 3..." style="width:100%"></div>
-    <div class="fg">
-      <label>🔗 Transborda para Julieta <span style="color:var(--muted);font-size:.72rem">(opcional)</span></label>
-      <select id="rot-vinculada"><option value="">— Nenhuma —</option></select>
-    </div>
-  </div>
   <div class="mf">
     <button class="btn btn-g" onclick="closeModal('modal-rota')">Cancelar</button>
     <button class="btn btn-p" onclick="saveRota()">Salvar</button>
@@ -796,7 +789,7 @@ function openModal(id){
   document.getElementById(id).classList.add('open');
 }
 function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('open');}
-document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg){bg.classList.remove('open','center');if(bg.id==='modal-senha'){_senhaCallback=null;}}}));
+document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg){bg.classList.remove('open','center');if(bg.id==='modal-senha'){_senhaCallback=null;}}}));});
 
 // ══════════ DASHBOARD ══════════
 function renderDashboard(){
@@ -809,6 +802,7 @@ function renderDashboard(){
   const escalasHoje=DB.get('escalas').filter(e=>e.data===dt);
   const sp=getSpecial(dt);
   const motEmEscala=new Set(escalasHoje.filter(e=>e.papel==='rota').map(e=>e.motorista_id));
+  const escalasRotaHoje=escalasHoje.filter(e=>e.papel==='rota');
 
   // Cards
   document.getElementById('dash-cards').innerHTML=`
@@ -819,7 +813,7 @@ function renderDashboard(){
     </div>
     <div style="background:var(--surface);border-radius:var(--r2);padding:16px 18px;box-shadow:var(--sh);border:1px solid var(--border);border-left:4px solid var(--amber)">
       <div style="font-size:.71rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Rotas Escaladas Hoje</div>
-      <div style="font-size:2rem;font-weight:700;color:var(--amber)">${motEmEscala.size}</div>
+      <div style="font-size:2rem;font-weight:700;color:var(--amber)">${escalasRotaHoje.length}</div>
       <div style="font-size:.74rem;color:var(--muted);margin-top:4px">de ${rotasHoje.length} previstas</div>
     </div>
     <div style="background:var(--surface);border-radius:var(--r2);padding:16px 18px;box-shadow:var(--sh);border:1px solid var(--border);border-left:4px solid var(--yellow)">
@@ -1747,8 +1741,7 @@ function renderPrevisaoRota(){
     return 1;
   }
 
-  // Ordenar por campo 'ordem' definido no cadastro
-  const rotasOrdenadas=[...todasRotas].sort((a,b)=>(a.ordem??99)-(b.ordem??99));
+  const rotasOrdenadas=todasRotas;
 
   const colW=`auto ${days.map(()=>'auto').join(' ')}`;
   let html=`<div style="display:grid;grid-template-columns:${colW}">`;
@@ -1764,11 +1757,10 @@ function renderPrevisaoRota(){
   rotasOrdenadas.forEach(r=>{
     const g=grupoRota(r);
 
-    const rotaJulieta=r.rota_vinculada_id?todasRotas.find(x=>x.id===r.rota_vinculada_id):null;
     const grpRota=grupoRota(r);
     const bolinhaRota=grpRota===2?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#c9920a;margin-right:4px;flex-shrink:0"></span>':grpRota===0?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#7B3F9E;margin-right:4px;flex-shrink:0"></span>':'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--navy);margin-right:4px;flex-shrink:0"></span>';
     html+=`<div class="prev-cell sticky-col" style="font-weight:600;font-size:.78rem;border-right:1px solid var(--border);align-items:center;padding:3px 6px;gap:2px">
-      ${bolinhaRota}<span>${rotaJulieta?'↳ ':''}<b>${r.nome}</b> <span style="font-weight:400;font-size:.65rem;color:var(--muted)">${r.intervalo}d${(r.duracao||1)>1?' ⛺':''}${rotaJulieta?` →`:''}</span></span>
+      ${bolinhaRota}<span><b>${r.nome}</b> <span style="font-weight:400;font-size:.65rem;color:var(--muted)">${r.intervalo}d${(r.duracao||1)>1?' ⛺':''}</span></span>
     </div>`;
 
     days.forEach(d=>{
@@ -1850,15 +1842,6 @@ function preencherMotFixoSelect(selId){
   [...DB.get('motoristas')].sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).forEach(m=>{
     sel.innerHTML+=`<option value="${m.id}" ${m.id===selId?'selected':''}>${nomeV(m)} (${m.tipo})</option>`;
   });
-  // Popular select de rota vinculada (todas as rotas ativas)
-  const selVinc=document.getElementById('rot-vinculada');
-  if(selVinc){
-    const valorAtual=selVinc.value;
-    selVinc.innerHTML='<option value="">— Nenhuma —</option>';
-    [...DB.get('rotas')].filter(r=>r.ativa).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'))
-      .forEach(r=>selVinc.innerHTML+=`<option value="${r.id}">${r.nome}</option>`);
-    selVinc.value=valorAtual;
-  }
 }
 
 function renderMotoristas(){
@@ -1876,7 +1859,7 @@ function renderMotoristas(){
         <td>${fmtDate(m.admissao)}</td>
         <td><button class="btn btn-g btn-sm" onclick="editMot(${m.id})">✏️</button>
             <button class="btn btn-d btn-sm" onclick="delMot(${m.id})">🗑</button></td>
-      </tr>`).join('')||'<tr><td colspan="6" class="empty">Nenhum.</td></tr>'}</tbody>
+      </tr>`).join('')||'<tr><td colspan="7" class="empty">Nenhum.</td></tr>'}</tbody>
     </table></div>
   </div>`;
 }
@@ -1947,7 +1930,7 @@ function renderVeiculos(){
         <td>${trouxe?nomeV(trouxe):'—'}</td>
         <td style="white-space:nowrap"><button class="btn btn-g btn-sm" onclick="editVei(${v.id})">✏️</button>
             <button class="btn btn-d btn-sm" onclick="delVei(${v.id})">🗑</button></td>
-      </tr>`;}).join('')||'<tr><td colspan="6" class="empty">Nenhum.</td></tr>'}</tbody>
+      </tr>`;}).join('')||'<tr><td colspan="9" class="empty">Nenhum.</td></tr>'}</tbody>
     </table></div>
   </div>`;
 }
@@ -1962,7 +1945,7 @@ function toggleManutCampos(status){
       const sel=document.getElementById(sid);
       if(!sel) return;
       sel.innerHTML='<option value="">— Selecionar —</option>';
-      mots.sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).forEach(m=>sel.innerHTML+=`<option value="${m.id}">${nomeV(m)}</option>`);
+      [...mots].sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).forEach(m=>sel.innerHTML+=`<option value="${m.id}">${nomeV(m)}</option>`);
     });
   }
 }
@@ -1992,7 +1975,7 @@ async function editVei(id){
       const sel=document.getElementById(sid);
       if(!sel) return;
       sel.innerHTML='<option value="">— Selecionar —</option>';
-      mots.sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).forEach(m=>sel.innerHTML+=`<option value="${m.id}">${nomeV(m)}</option>`);
+      [...mots].sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).forEach(m=>sel.innerHTML+=`<option value="${m.id}">${nomeV(m)}</option>`);
     });
     const sl=document.getElementById('vei-manut-levou');if(sl)sl.value=v.manutLevouId||'';
     const st=document.getElementById('vei-manut-trouxe');if(st)st.value=v.manutTrouxeId||'';
@@ -2032,7 +2015,7 @@ function renderRotas(){
   document.getElementById('cad-rotas').innerHTML=`<div class="panel">
     <div class="ph"><div class="pt">🗺️ Rotas</div><button class="btn btn-p" onclick="openRotModal()">+ Nova</button></div>
     <div class="tw"><table>
-      <thead><tr><th>Nome</th><th>Grupo</th><th>Mot. Fixo</th><th>Intervalo</th><th>Duração</th><th>Ativa</th><th>Última Exec.</th><th>Ações</th></tr></thead>
+      <thead><tr><th>Nome</th><th>Intervalo</th><th>Duração</th><th>Ativa</th><th>Última Exec.</th><th>Produtores</th><th>Ações</th></tr></thead>
       <tbody>${list.map(r=>{
         const pIds=rpMap[r.id]||[];
         const pN=prods.filter(p=>pIds.includes(p.id)).map(p=>p.apelido||p.nome);
@@ -2049,7 +2032,7 @@ function renderRotas(){
             <button class="btn btn-d btn-sm" onclick="delRot(${r.id})">🗑</button>
           </td>
         </tr>`;
-      }).join('')||'<tr><td colspan="6" class="empty">Nenhuma.</td></tr>'}</tbody>
+      }).join('')||'<tr><td colspan="7" class="empty">Nenhuma.</td></tr>'}</tbody>
     </table></div>
   </div>`;
 }
@@ -2070,8 +2053,6 @@ async function editRot(id){
   document.getElementById('rot-intervalo').value=r.intervalo;
   document.getElementById('rot-duracao').value=r.duracao||1;
   if(document.getElementById('rot-grupo'))document.getElementById('rot-grupo').value=r.grupo||'colaborador';
-  if(document.getElementById('rot-vinculada'))document.getElementById('rot-vinculada').value=r.rota_vinculada_id||'';
-  if(document.getElementById('rot-ordem'))document.getElementById('rot-ordem').value=r.ordem||'';
   document.getElementById('rot-grupo').value=r.grupo||r.tipo_rota||'colaborador';
   document.getElementById('rot-ultima').value=r.ultima||'';
   document.getElementById('rot-ativa').value=r.ativa;
@@ -2250,39 +2231,7 @@ function printRel(divId,titulo){
   <h1>EscalaOP — ${titulo} &nbsp;<small style="font-weight:400;color:#6B7A86">${new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'})}</small></h1>
   ${conteudo}
   <script>window.onload=()=>window.print()<\/script>
-  
-<!-- Modal Senha -->
-<div class="modal-bg" id="modal-senha" style="align-items:center">
-<div class="modal" style="max-width:340px;border-radius:16px">
-  <div style="text-align:center;margin-bottom:16px">
-    <div style="font-size:2rem">🔒</div>
-    <h3 style="margin-bottom:4px" id="senha-titulo">Área Restrita</h3>
-    <p style="font-size:.82rem;color:var(--muted)" id="senha-desc">Digite a senha para acessar esta área.</p>
-  </div>
-  <div class="fg">
-    <input type="password" id="senha-input" placeholder="Digite a senha..." style="width:100%;text-align:center;font-size:1.1rem;letter-spacing:4px"
-      onkeydown="if(event.key==='Enter')confirmarSenha()">
-  </div>
-  <p id="senha-erro" style="color:var(--red);font-size:.8rem;text-align:center;min-height:18px;margin-top:4px"></p>
-  <div class="mf" style="justify-content:center;gap:12px;margin-top:12px">
-    <button class="btn btn-g" onclick="closeModal('modal-senha');_senhaCallback=null">Cancelar</button>
-    <button class="btn btn-p" onclick="confirmarSenha()">🔓 Entrar</button>
-  </div>
-</div></div>
-
-<!-- Modal Alterar Senha -->
-<div class="modal-bg" id="modal-alterar-senha" style="align-items:center">
-<div class="modal" style="max-width:340px;border-radius:16px">
-  <h3>🔑 Alterar Senha</h3>
-  <div class="fg"><label>Senha Atual</label><input type="password" id="as-atual" style="width:100%"></div>
-  <div class="fg"><label>Nova Senha</label><input type="password" id="as-nova" style="width:100%"></div>
-  <div class="fg"><label>Confirmar Nova Senha</label><input type="password" id="as-confirma" style="width:100%"></div>
-  <div class="mf">
-    <button class="btn btn-g" onclick="closeModal('modal-alterar-senha')">Cancelar</button>
-    <button class="btn btn-p" onclick="salvarNovaSenha()">Salvar</button>
-  </div>
-</div></div>
-</body></html>`);
+  </body></html>`);
   w.document.close();
 }
 
@@ -2422,6 +2371,7 @@ async function importarDados(input){
           nome:m.nome,
           apelido:m.apelido||'',
           tipo:m.tipo==='Próprio'?'Colaborador':(m.tipo||'Colaborador'),
+          cnh:m.cnh||'D',
           status:m.status||'Ativo',
           admissao:m.admissao||null,
           obs:m.obs||''
@@ -2431,13 +2381,13 @@ async function importarDados(input){
 
       // 3. Inserir veículos
       if(dados.veiculos?.length){
-        const rowsVeis=dados.veiculos.map(v=>({id:v.id,frota:v.frota,placa:v.placa,modelo:v.modelo,status:v.status||'ativo',manut_obs:v.manutObs||v.manut_obs||''}));
+        const rowsVeis=dados.veiculos.map(v=>({id:v.id,frota:v.frota,placa:v.placa,modelo:v.modelo,status:v.status||'ativo',manut_obs:v.manutObs||v.manut_obs||'',manut_entrada:v.manutEntrada||v.manut_entrada||null,manut_saida:v.manutSaida||v.manut_saida||null,manut_levou_id:v.manutLevouId||v.manut_levou_id||null,manut_trouxe_id:v.manutTrouxeId||v.manut_trouxe_id||null}));
         await supa('veiculos','POST',rowsVeis);
       }
 
       // 4. Inserir rotas
       if(dados.rotas?.length){
-        const rowsRotas=dados.rotas.map(r=>({id:r.id,nome:r.nome,intervalo:r.intervalo||1,duracao:r.duracao||1,ativa:r.ativa??1,ultima:r.ultima||null}));
+        const rowsRotas=dados.rotas.map(r=>({id:r.id,nome:r.nome,intervalo:r.intervalo||1,duracao:r.duracao||1,grupo:r.grupo||'colaborador',motorista_fixo:r.motorista_fixo||null,ativa:r.ativa??1,ultima:r.ultima||null}));
         await supa('rotas','POST',rowsRotas);
       }
 
@@ -2535,7 +2485,7 @@ async function carregarDados(){
       manutLevouId:v.manut_levou_id||null,
       manutTrouxeId:v.manut_trouxe_id||null,
     }))]);
-    DB.set('rotas', rotas.map(r=>({...r,grupo:r.grupo||r.tipo_rota||'colaborador',ordem:r.ordem??99})));
+    DB.set('rotas', rotas.map(r=>({...r,grupo:r.grupo||r.tipo_rota||'colaborador'})));
     DB.set('produtores', produtores);
     const motsCached=DB.get('motoristas'); // já normalizado acima
     DB.set('escalas', escalas.map(e=>{
