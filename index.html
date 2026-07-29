@@ -182,6 +182,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 
 /* ══ BOTTOM NAV mobile ══ */
 .bottom-nav{display:none}
+.bnav-hidden{transform:translateY(100%);transition:transform .25s ease}
 @media(max-width:700px){
 .prev-mot-sub{display:none}
 .prev-grupo-sep{font-size:.6rem !important;padding:1px 6px !important}
@@ -214,6 +215,22 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
   #dash-cards{grid-template-columns:repeat(2,1fr) !important}
   select,input,textarea{font-size:16px !important}
   .btn-sm{min-height:40px}
+}
+@media(min-width:768px) and (max-width:1024px){
+  .nav-tabs{display:none}
+  .bottom-nav{
+    display:flex;position:fixed;bottom:0;left:0;right:0;
+    background:rgba(27,58,75,0.95);padding:2px 0;
+    padding-bottom:calc(2px + var(--safe-bottom));
+    box-shadow:0 -1px 8px rgba(0,0,0,.15);z-index:100;
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border-top:1px solid rgba(255,255,255,.08);
+  }
+  .bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;background:none;border:none;color:rgba(255,255,255,.45);cursor:pointer;padding:3px 2px;font-size:.55rem;font-weight:500;touch-action:manipulation;min-height:40px}
+  .bnav-btn .bnav-icon{font-size:1.1rem;line-height:1.2}
+  .bnav-btn.active{color:var(--amber)}
+  main{padding-bottom:calc(76px + var(--safe-bottom))}
+  select,input,textarea{font-size:16px !important}
 }
 </style>
 </head>
@@ -758,6 +775,7 @@ function goPage(p,btn,source){
   // Sync bottom nav
   document.querySelectorAll('.bnav-btn').forEach(x=>x.classList.remove('active'));
   const bn=document.getElementById('bnav-'+p); if(bn) bn.classList.add('active');
+  if(window._bnavShow){window._bnavShow();window._bnavScheduleHide();}
 
   if(p==='dashboard')renderDashboard();
   if(p==='escala'){if(!document.getElementById('escala-date').value)document.getElementById('escala-date').value=today();renderEscala();}
@@ -789,7 +807,26 @@ function openModal(id){
   document.getElementById(id).classList.add('open');
 }
 function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('open');}
-document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg){bg.classList.remove('open','center');if(bg.id==='modal-senha'){_senhaCallback=null;}}}));});
+document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg){bg.classList.remove('open','center');if(bg.id==='modal-senha'){_senhaCallback=null;}}}));
+  // E13 — bottom-nav auto-hide por inatividade
+  let _bnavTimer=null;
+  const _bnav=document.querySelector('.bottom-nav');
+  function _bnavShow(){if(_bnav)_bnav.classList.remove('bnav-hidden');}
+  function _bnavScheduleHide(){
+    clearTimeout(_bnavTimer);
+    _bnavTimer=setTimeout(()=>{
+      if(!_bnav)return;
+      if(window.scrollY<=50)return;
+      if(document.querySelector('.modal-bg.open'))return;
+      if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName?.toUpperCase()))return;
+      _bnav.classList.add('bnav-hidden');
+    },1000);
+  }
+  window._bnavShow=_bnavShow;window._bnavScheduleHide=_bnavScheduleHide;
+  ['scroll','touchstart','touchmove','mousedown'].forEach(ev=>window.addEventListener(ev,()=>{_bnavShow();_bnavScheduleHide();},{passive:true}));
+  document.addEventListener('focusin',()=>{_bnavShow();clearTimeout(_bnavTimer);});
+  document.addEventListener('focusout',()=>{_bnavScheduleHide();});
+});
 
 // ══════════ DASHBOARD ══════════
 function renderDashboard(){
