@@ -159,6 +159,11 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 .prev-head-cell{padding:5px 6px;border-right:1px solid var(--border);font-size:.71rem;font-weight:700;color:var(--muted);text-align:center;background:var(--bg)}
 .prev-head-cell.today{background:#fff8e6;color:var(--amber)}
 .prev-cell{padding:4px 6px;border-right:1px solid var(--border);font-size:.79rem;min-height:32px;display:flex;align-items:center}.prev-cell.sticky-col{position:sticky;left:0;z-index:10;background:var(--surface);box-shadow:2px 0 4px rgba(0,0,0,.06);white-space:nowrap}.prev-head-cell.sticky-col{position:sticky;left:0;z-index:11;background:var(--bg);white-space:nowrap}
+.prev-col-fixa{flex-shrink:0;border-right:2px solid var(--border)}
+.prev-col-fixa .prev-head-cell{text-align:left;padding-left:10px}
+.prev-col-fixa .prev-cell{border-right:none}
+.prev-col-dias{flex:1;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.prev-grupo-sep{padding:6px 14px;font-size:.72rem;font-weight:700;letter-spacing:.5px}
 .prev-cell.today{background:#fffbf2}
 .day-event{font-size:.69rem;padding:1px 5px;border-radius:4px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
 .de-rota{background:#d1e7dd;color:#0a5c36}
@@ -1672,26 +1677,34 @@ function renderPrevisaoMotorista(){
     {label:'🟡 Agregados',     cor:'#7B3F9E',    bg:'#f3e8fa', mots:todosMotsAtivos.filter(m=>m.tipo==='Agregado').sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'))},
   ];
 
-  const colW=`auto ${days.map(()=>'auto').join(' ')}`;
-  let html=`<div style="display:grid;grid-template-columns:${colW}">`;
-
-  // Cabeçalho
-  html+=`<div class="prev-head-cell" style="text-align:left;padding-left:14px">Motorista</div>`;
-  days.forEach(d=>{
-    const dow=new Date(d+'T12:00:00').getDay();
-    const isToday=d===dt;
-    html+=`<div class="prev-head-cell${isToday?' today':''}">${dowNames[dow]}<br><b>${fmtDateShort(d)}</b></div>`;
-  });
-
+  // ── Coluna fixa ──
+  let fixo=`<div class="prev-col-fixa">`;
+  fixo+=`<div class="prev-head-cell" style="text-align:left;padding-left:14px">Motorista</div>`;
   gruposMotorista.forEach(({label,cor,bg,mots})=>{
     if(!mots.length) return;
-    // Separador de grupo
-    html+=`<div style="grid-column:1/-1;background:${bg};padding:6px 14px;font-size:.72rem;font-weight:700;letter-spacing:.5px;color:${cor}">${label}</div>`;
+    fixo+=`<div class="prev-grupo-sep" style="background:${bg};color:${cor}">${label}</div>`;
     mots.forEach(m=>{
-      html+=`<div class="prev-cell sticky-col" style="font-weight:600;font-size:.82rem;border-right:1px solid var(--border);flex-direction:column;align-items:flex-start">
+      fixo+=`<div class="prev-cell" style="font-weight:600;font-size:.82rem;border-right:none;flex-direction:column;align-items:flex-start">
         <span>${nomeV(m)}</span>
         <span class="prev-mot-sub" style="font-weight:400;font-size:.7rem;color:var(--muted)">${tipoV(m)} · CNH ${m.cnh||'D'}</span>
       </div>`;
+    });
+  });
+  fixo+=`</div>`;
+
+  // ── Área rolável ──
+  const colW=`${days.map(()=>'auto').join(' ')}`;
+  let dias=`<div class="prev-col-dias"><div style="display:grid;grid-template-columns:${colW}">`;
+  // Cabeçalho
+  days.forEach(d=>{
+    const dow=new Date(d+'T12:00:00').getDay();
+    const isToday=d===dt;
+    dias+=`<div class="prev-head-cell${isToday?' today':''}">${dowNames[dow]}<br><b>${fmtDateShort(d)}</b></div>`;
+  });
+  gruposMotorista.forEach(({label,cor,bg,mots})=>{
+    if(!mots.length) return;
+    dias+=`<div style="grid-column:1/-1;background:${bg};padding:6px 14px;font-size:.72rem;font-weight:700;letter-spacing:.5px;color:${cor}">${label}</div>`;
+    mots.forEach(m=>{
       days.forEach(d=>{
         const isToday=d===dt;
         const indispon=temBloqueioData(m.id,d);
@@ -1701,7 +1714,6 @@ function renderPrevisaoMotorista(){
         const ss=escsD.find(e=>e.papel==='soro');
         const sc=escsD.find(e=>e.papel==='socorro');
         const rotasEsc=escsD.filter(e=>e.papel==='rota');
-
         let content='';
         if(indispon){
           const lbl=motivoIndisp(m,d);
@@ -1711,50 +1723,68 @@ function renderPrevisaoMotorista(){
           if(sa) content+=`<div class="day-event de-sobreaviso">📡 S.Aviso</div>`;
           if(ss) content+=`<div class="day-event" style="background:#e6f4ed;color:#1a5c36">🥛 Soro</div>`;
           if(sc) content+=`<div class="day-event" style="background:#fdecea;color:#7a1a1a">🆘 Socorro</div>`;
-          // Verificar pernoite encadeado: ontem tinha 2 rotas → hoje é dia da rota 2
           const encPernoite=emPernoiteEncadeado(m.id,d);
           if(encPernoite&&!rotasEsc.length){
             const rEnc=rotas.find(x=>x.id===encPernoite.rota_id);
             content=`<div class="day-event de-rota" style="opacity:.85">⛺ ${rEnc?rEnc.nome:'?'}</div>`;
           } else {
-            // Mostrar rotas escaladas (exceto rota 2 encadeada, que vai aparecer amanhã)
             const isEncHoje=isEncadeada(m.id,d);
-            const rotasParaMostrar=isEncHoje?rotasEsc.slice(0,1):rotasEsc; // só rota 1 no dia de saída
+            const rotasParaMostrar=isEncHoje?rotasEsc.slice(0,1):rotasEsc;
             rotasParaMostrar.forEach(e=>{
               const r=rotas.find(x=>x.id===e.rota_id);
               content+=`<div class="day-event de-rota">${r?r.nome:'?'}${isEncHoje?' <span style="font-size:.65rem;opacity:.7">+⛺</span>':''}</div>`;
             });
             if(isEncHoje){
-              // Mostrar rota 2 com label "amanhã"
               const r2=rotasEsc[1]?rotas.find(x=>x.id===rotasEsc[1].rota_id):null;
               if(r2) content+=`<div class="day-event de-rota" style="opacity:.65;font-size:.68rem">⛺ ${r2.nome}</div>`;
             }
           }
           if(!sp&&!sa&&!ss&&!sc&&!content){
-            // Verificar pernoite por duração de rota
             let pernoite=false;
             for(let back=1;back<=4;back++){
               const dAntes=addDays(d,-back);
               const escsAntes=escalas.filter(e=>e.data===dAntes&&e.motorista_id===m.id&&e.papel==='rota');
               for(const ea of escsAntes){
                 const ra=rotas.find(x=>x.id===ea.rota_id);
-                if(ra&&(ra.duracao||1)>back){
-                  content=`<div class="day-event de-rota" style="opacity:.6">⛺ ${ra.nome}</div>`;
-                  pernoite=true; break;
-                }
+                if(ra&&(ra.duracao||1)>back){content=`<div class="day-event de-rota" style="opacity:.6">⛺ ${ra.nome}</div>`;pernoite=true;break;}
               }
               if(pernoite) break;
             }
             if(!pernoite) content=`<div style="color:var(--muted);font-size:.72rem;text-align:center">—</div>`;
           }
         }
-        html+=`<div class="prev-cell${isToday?' today':''}" style="flex-direction:column;align-items:flex-start;gap:2px">${content}</div>`;
+        dias+=`<div class="prev-cell${isToday?' today':''}" style="flex-direction:column;align-items:flex-start;gap:2px">${content}</div>`;
       });
     });
   });
+  dias+=`</div></div>`;
 
-  html+='</div>';
-  document.getElementById('prev-body').innerHTML=html;
+  const wrap=document.getElementById('prev-body');
+  wrap.style.display='flex';
+  wrap.innerHTML=fixo+dias;
+
+  // Sincronização de alturas
+  requestAnimationFrame(()=>{
+    const colFixa=wrap.querySelector('.prev-col-fixa');
+    const colDias=wrap.querySelector('.prev-col-dias>div');
+    if(!colFixa||!colDias) return;
+    const fixaCells=Array.from(colFixa.children);
+    const diasCells=Array.from(colDias.children);
+    let di=0;
+    fixaCells.forEach(fc=>{
+      const isSep=fc.classList.contains('prev-grupo-sep');
+      if(isSep){
+        const sc=diasCells[di];
+        if(sc){const h=Math.max(fc.offsetHeight,sc.offsetHeight);fc.style.height=h+'px';sc.style.height=h+'px';}
+        di+=1;
+      } else {
+        const row=diasCells.slice(di,di+prevDias);
+        const h=Math.max(fc.offsetHeight,...row.map(c=>c.offsetHeight));
+        fc.style.height=h+'px';row.forEach(c=>c.style.height=h+'px');
+        di+=prevDias;
+      }
+    });
+  });
 }
 
 function renderPrevisaoRota(){
@@ -1768,14 +1798,10 @@ function renderPrevisaoRota(){
   const escalas=DB.get('escalas');
   const dowNames=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
-  // Agrupamento: Julieta = rotas com "julieta" no nome (case insensitive)
-  // Agregado = última escala da rota foi feita por motorista Agregado
-  // Próprio/Colaborador = restante
   function grupoRota(r){
     if(r.grupo==='julieta') return 0;
     if(r.grupo==='agregado') return 2;
     if(r.grupo==='colaborador') return 1;
-    // fallback: detectar pelo nome
     if(/julieta/i.test(r.nome)) return 0;
     const ultEscs=escalas.filter(e=>e.rota_id===r.id&&e.papel==='rota').slice(-3);
     const agg=ultEscs.filter(e=>{const m=mots.find(x=>x.id===e.motorista_id);return m&&m.tipo==='Agregado';});
@@ -1785,34 +1811,33 @@ function renderPrevisaoRota(){
 
   const rotasOrdenadas=[...todasRotas].sort((a,b)=>(a.ordem??99)-(b.ordem??99));
 
-  const colW=`auto ${days.map(()=>'auto').join(' ')}`;
-  let html=`<div style="display:grid;grid-template-columns:${colW}">`;
+  // ── Coluna fixa ──
+  let fixo=`<div class="prev-col-fixa">`;
+  fixo+=`<div class="prev-head-cell" style="text-align:left;padding-left:10px">Rota</div>`;
+  rotasOrdenadas.forEach(r=>{
+    const grpRota=grupoRota(r);
+    const bolinha=grpRota===2?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#c9920a;margin-right:4px;flex-shrink:0"></span>':grpRota===0?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#7B3F9E;margin-right:4px;flex-shrink:0"></span>':'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--navy);margin-right:4px;flex-shrink:0"></span>';
+    fixo+=`<div class="prev-cell" style="font-weight:600;font-size:.78rem;border-right:none;align-items:center;padding:3px 6px;gap:2px;white-space:nowrap">
+      ${bolinha}<span><b>${r.nome}</b> <span style="font-weight:400;font-size:.65rem;color:var(--muted)">${r.intervalo}d${(r.duracao||1)>1?' ⛺':''}</span></span>
+    </div>`;
+  });
+  fixo+=`</div>`;
 
-  // Cabeçalho
-  html+=`<div class="prev-head-cell sticky-col" style="text-align:left;padding-left:14px">Rota</div>`;
+  // ── Área rolável ──
+  const colW=`${days.map(()=>'auto').join(' ')}`;
+  let dias=`<div class="prev-col-dias"><div style="display:grid;grid-template-columns:${colW}">`;
   days.forEach(d=>{
     const dow=new Date(d+'T12:00:00').getDay();
     const isToday=d===dt;
-    html+=`<div class="prev-head-cell${isToday?' today':''}">${dowNames[dow]}<br><b>${fmtDateShort(d)}</b></div>`;
+    dias+=`<div class="prev-head-cell${isToday?' today':''}">${dowNames[dow]}<br><b>${fmtDateShort(d)}</b></div>`;
   });
-
   rotasOrdenadas.forEach(r=>{
     const g=grupoRota(r);
-
-    const grpRota=grupoRota(r);
-    const bolinhaRota=grpRota===2?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#c9920a;margin-right:4px;flex-shrink:0"></span>':grpRota===0?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#7B3F9E;margin-right:4px;flex-shrink:0"></span>':'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--navy);margin-right:4px;flex-shrink:0"></span>';
-    html+=`<div class="prev-cell sticky-col" style="font-weight:600;font-size:.78rem;border-right:1px solid var(--border);align-items:center;padding:3px 6px;gap:2px">
-      ${bolinhaRota}<span><b>${r.nome}</b> <span style="font-weight:400;font-size:.65rem;color:var(--muted)">${r.intervalo}d${(r.duracao||1)>1?' ⛺':''}</span></span>
-    </div>`;
-
     days.forEach(d=>{
       const isToday=d===dt;
       const deveRodar=!!rotasParaDt(d).find(x=>x.id===r.id);
-      // Todos os escalados nessa rota nesse dia
-      // Rota encadeada: a rota 2 é escalada no dia anterior mas executada hoje
       const dAnterior=addDays(d,-1);
       const escsRotaHoje=escalas.filter(e=>e.data===d&&e.rota_id===r.id&&e.papel==='rota');
-      // Pernoite: motoristas que saíram num dia anterior com essa rota de duração > 1
       const dur=r.duracao||1;
       let escsPernoite=[];
       if(dur>1&&!escsRotaHoje.length){
@@ -1825,15 +1850,11 @@ function renderPrevisaoRota(){
       const escsEncadeadaOntem=escalas.filter(e=>{
         if(e.data!==dAnterior||e.papel!=='rota') return false;
         const escsMotOntem=escalas.filter(x=>x.data===dAnterior&&x.motorista_id===e.motorista_id&&x.papel==='rota');
-        // Só é encadeada se o motorista tinha EXATAMENTE 2 rotas ontem
-        // E esta escala é a SEGUNDA rota (não a primeira)
         if(escsMotOntem.length!==2) return false;
         if(e.id!==escsMotOntem[1].id) return false;
-        // E a segunda rota é esta rota atual
         return escsMotOntem[1].rota_id===r.id;
       });
       const escsRota=[...escsRotaHoje,...escsEncadeadaOntem];
-
       let content='';
       if(escsRota.length){
         content=escsRota.map(e=>{
@@ -1846,21 +1867,37 @@ function renderPrevisaoRota(){
       } else if(escsPernoite.length){
         content=escsPernoite.map(e=>{
           const m=mots.find(x=>x.id===e.motorista_id);
-          return`<div class="day-event de-rota" style="font-size:.72rem;opacity:.7">
-            ⛺ <b>${m?nomeV(m):'?'}</b>
-          </div>`;
+          return`<div class="day-event de-rota" style="font-size:.72rem;opacity:.7">⛺ <b>${m?nomeV(m):'?'}</b></div>`;
         }).join('');
       } else if(deveRodar){
         content=`<div class="day-event de-prev">Prevista</div>`;
       } else {
         content=`<span style="color:#ccc;font-size:.8rem">—</span>`;
       }
-      html+=`<div class="prev-cell${isToday?' today':''}" style="flex-direction:column;align-items:flex-start;gap:2px">${content}</div>`;
+      dias+=`<div class="prev-cell${isToday?' today':''}" style="flex-direction:column;align-items:flex-start;gap:2px">${content}</div>`;
     });
   });
+  dias+=`</div></div>`;
 
-  html+='</div>';
-  document.getElementById('prev-body').innerHTML=html;
+  const wrap=document.getElementById('prev-body');
+  wrap.style.display='flex';
+  wrap.innerHTML=fixo+dias;
+
+  // Sincronização de alturas
+  requestAnimationFrame(()=>{
+    const colFixa=wrap.querySelector('.prev-col-fixa');
+    const colDias=wrap.querySelector('.prev-col-dias>div');
+    if(!colFixa||!colDias) return;
+    const fixaCells=Array.from(colFixa.children);
+    const diasCells=Array.from(colDias.children);
+    let di=0;
+    fixaCells.forEach(fc=>{
+      const row=diasCells.slice(di,di+prevDias);
+      const h=Math.max(fc.offsetHeight,...row.map(c=>c.offsetHeight));
+      fc.style.height=h+'px';row.forEach(c=>c.style.height=h+'px');
+      di+=prevDias;
+    });
+  });
 }
 
 // ══════════ CADASTROS ══════════
