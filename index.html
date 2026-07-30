@@ -158,7 +158,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 /* PREVISÃO */
 .prev-head-cell{padding:5px 6px;border-right:1px solid var(--border);font-size:.71rem;font-weight:700;color:var(--muted);text-align:center;background:var(--bg)}
 .prev-head-cell.today{background:#fff8e6;color:var(--amber)}
-.prev-cell{padding:4px 6px;border-right:1px solid var(--border);font-size:.79rem;min-height:32px;display:flex;align-items:center}.prev-cell.sticky-col{position:sticky;left:0;z-index:10;background:var(--surface);box-shadow:2px 0 4px rgba(0,0,0,.06)}.prev-head-cell.sticky-col{position:sticky;left:0;z-index:11;background:var(--bg)}
+.prev-cell{padding:4px 6px;border-right:1px solid var(--border);font-size:.79rem;min-height:32px;display:flex;align-items:center}.prev-cell.sticky-col{position:sticky;left:0;z-index:10;background:var(--surface);box-shadow:2px 0 4px rgba(0,0,0,.06);white-space:nowrap}.prev-head-cell.sticky-col{position:sticky;left:0;z-index:11;background:var(--bg);white-space:nowrap}
 .prev-cell.today{background:#fffbf2}
 .day-event{font-size:.69rem;padding:1px 5px;border-radius:4px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
 .de-rota{background:#d1e7dd;color:#0a5c36}
@@ -357,7 +357,9 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-g" onclick="(()=>{const i=document.getElementById('escala-date');i.value=addDays(i.value||(()=>{i.value=today();return today()})(),-1);renderEscala();})()" style="padding:6px 10px;font-size:.9rem">◀</button>
         <input type="date" id="escala-date" onchange="renderEscala()">
+        <button class="btn btn-g" onclick="(()=>{const i=document.getElementById('escala-date');i.value=addDays(i.value||(()=>{i.value=today();return today()})(),1);renderEscala();})()" style="padding:6px 10px;font-size:.9rem">▶</button>
         <button class="btn btn-a" onclick="salvarEscala()">💾 Salvar</button>
         <button class="gerar-btn" style="padding:8px 14px;font-size:.82rem" onclick="gerarEscalaAuto()">⚡ Gerar Auto</button>
       </div>
@@ -845,7 +847,7 @@ function renderDashboard(){
   // Cards
   document.getElementById('dash-cards').innerHTML=`
     <div style="background:var(--surface);border-radius:var(--r2);padding:16px 18px;box-shadow:var(--sh);border:1px solid var(--border);border-left:4px solid var(--green)">
-      <div style="font-size:.71rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Disponíveis Hoje</div>
+      <div style="font-size:.71rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Motoristas Disponíveis Hoje</div>
       <div style="font-size:2rem;font-weight:700;color:var(--green)">${disp.filter(m=>m.tipo!=='Agregado'&&!motEmEscala.has(m.id)).length}</div>
       <div style="font-size:.74rem;color:var(--muted);margin-top:4px">de ${mots.filter(m=>m.status==='Ativo').length} ativos</div>
     </div>
@@ -1203,9 +1205,11 @@ function renderEscalaPorMotorista(){
 
   // Preencher plantão / sobre aviso / soro / socorro
   const sp=getSpecial(dt);
+  const motEscaladosRota=new Set(escalas.filter(e=>e.papel==='rota').map(e=>e.motorista_id));
+  const dispNaoEscalados=disp.filter(m=>!motEscaladosRota.has(m.id));
   const mSel=id=>{
     let o='<option value="">— Selecionar —</option>';
-    [...disp].sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).forEach(m=>o+=`<option value="${m.id}" ${m.id===id?'selected':''}>${nomeV(m)}</option>`);
+    [...dispNaoEscalados].sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).forEach(m=>o+=`<option value="${m.id}" ${m.id===id?'selected':''}>${nomeV(m)}</option>`);
     return o;
   };
   // Preencher plantão / sobre aviso / soro / socorro SEM disparar onchange
@@ -1220,7 +1224,7 @@ function renderEscalaPorMotorista(){
   }
   // Sobre aviso: chips + select para adicionar
   _sobreAvisoIds=[...sp.sobreaviso];
-  if(document.getElementById('sobreaviso-chips')) renderSobreAvisoChips(_sobreAvisoIds, disp);
+  if(document.getElementById('sobreaviso-chips')) renderSobreAvisoChips(_sobreAvisoIds, dispNaoEscalados);
   if(selSoro){
     selSoro.innerHTML=mSel(sp.soro);
     selSoro.value=sp.soro||'';
