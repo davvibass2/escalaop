@@ -1,0 +1,25 @@
+{
+  "name": "EscalaOP — Atalat",
+  "short_name": "EscalaOP",
+  "description": "Gestão de escala de motoristas da coleta de leite — Atalat",
+  "start_url": "/escalaop/",
+  "display": "standalone",
+  "background_color": "#1b3a4b",
+  "theme_color": "#1b3a4b",
+  "orientation": "any",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
