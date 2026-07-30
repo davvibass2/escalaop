@@ -643,6 +643,21 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
   </div>
 </div></div>
 
+<!-- Modal atribuição rápida pela Previsão por Rota -->
+<div class="modal-bg" id="modal-atrib-rota">
+<div class="modal">
+  <h3 id="ar-title">Atribuir Rota</h3>
+  <input type="hidden" id="ar-rota-id">
+  <input type="hidden" id="ar-data">
+  <div class="fg"><label>Motorista</label><select id="ar-mot" style="width:100%" onchange="arAtualizarVeiculos()"><option value="">— Selecionar —</option></select></div>
+  <div class="fg"><label>Veículo</label><select id="ar-vei" style="width:100%"><option value="">— Selecionar —</option></select></div>
+  <div id="ar-aviso" style="font-size:.78rem;margin-top:4px"></div>
+  <div class="mf">
+    <button class="btn btn-g" onclick="closeModal('modal-atrib-rota')">Cancelar</button>
+    <button class="btn btn-p" onclick="confirmarAtribRota()">Confirmar</button>
+  </div>
+</div></div>
+
 <!-- Editar escala salva -->
 <div class="modal-bg" id="modal-edit-esc">
 <div class="modal">
@@ -1449,6 +1464,81 @@ async function confirmarAtrib(){
   }catch(e){showToast('Erro ao atribuir rota.','danger');}
 }
 
+function openAtribRota(rotaId, data){
+  const rota=DB.get('rotas').find(r=>r.id===rotaId);
+  if(!rota) return;
+  document.getElementById('ar-rota-id').value=rotaId;
+  document.getElementById('ar-data').value=data;
+  document.getElementById('ar-title').textContent=`Escalar: ${rota.nome}`;
+  document.getElementById('ar-aviso').textContent='';
+
+  // Motoristas disponíveis na data, excluindo quem já tem rota nesse dia
+  const dispNaData=motDisp(data);
+  const jaEscalados=new Set(DB.get('escalas').filter(e=>e.data===data&&e.papel==='rota').map(e=>e.motorista_id));
+  const candidatos=dispNaData.filter(m=>!jaEscalados.has(m.id));
+
+  const selMot=document.getElementById('ar-mot');
+  selMot.innerHTML='<option value="">— Selecionar —</option>';
+  [...candidatos].sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR')).forEach(m=>{
+    const bloqueado=precisaFolga(m.id,data);
+    selMot.innerHTML+=`<option value="${m.id}" ${bloqueado?'disabled style="color:#aaa"':''}>${nomeV(m)}${bloqueado?' 🔴 folga obrigatória':''}</option>`;
+  });
+  document.getElementById('ar-vei').innerHTML='<option value="">— Selecionar —</option>';
+  openModal('modal-atrib-rota');
+}
+
+function arAtualizarVeiculos(){
+  const motId=parseInt(document.getElementById('ar-mot').value)||null;
+  const data=document.getElementById('ar-data').value;
+  const aviso=document.getElementById('ar-aviso');
+  const selVei=document.getElementById('ar-vei');
+  selVei.innerHTML='<option value="">— Selecionar —</option>';
+  aviso.textContent='';
+  if(!motId) return;
+
+  // Bloquear se 7º dia consecutivo
+  if(precisaFolga(motId,data)){
+    aviso.innerHTML='<span style="color:#c0392b;font-weight:600">🔴 Folga obrigatória — este motorista atingiu 6 dias consecutivos.</span>';
+    return;
+  }
+  // Alerta amarelo
+  const alerta=alertaJornada(motId,data);
+  if(alerta) aviso.innerHTML=`<span style="color:#c07000">⚠️ ${alerta.msg}</span>`;
+
+  // Veículos disponíveis (sem manutenção) filtrados pelo tipo do motorista
+  const m=DB.get('motoristas').find(x=>x.id===motId);
+  const isAgg=m&&m.tipo==='Agregado';
+  const veicsDisp=DB.get('veiculos').filter(v=>{
+    if(v.status==='manutencao') return false;
+    if(isAgg) return v.id===0;
+    return v.id!==0&&v.status!=='inativo';
+  });
+  veicsDisp.forEach(v=>selVei.innerHTML+=`<option value="${v.id}">${v.frota}${v.modelo?' — '+v.modelo:''}</option>`);
+}
+
+async function confirmarAtribRota(){
+  const rotaId=parseInt(document.getElementById('ar-rota-id').value);
+  const data=document.getElementById('ar-data').value;
+  const motId=parseInt(document.getElementById('ar-mot').value)||null;
+  const _rv=document.getElementById('ar-vei').value;
+  const veiId=(_rv===''||_rv===null)?null:parseInt(_rv);
+  if(!motId){alert('Selecione um motorista.');return;}
+  if(precisaFolga(motId,data)){alert('Folga obrigatória — não é possível escalar este motorista.');return;}
+  try{
+    const novaEsc={data,rota_id:rotaId,motorista_id:motId,veiculo_id:veiId,papel:'rota'};
+    const created=await syncEscala(novaEsc,true);
+    const escalas=DB.get('escalas');
+    if(created) escalas.push(created);
+    const rotas=DB.get('rotas');
+    const ri=rotas.findIndex(r=>r.id===rotaId);
+    if(ri>=0){rotas[ri].ultima=data;await syncRota(rotas[ri],false);DB.set('rotas',rotas);}
+    DB.set('escalas',escalas);
+    closeModal('modal-atrib-rota');
+    renderPrevisaoRota();
+    showToast('Rota atribuída!','success');
+  }catch(e){showToast('Erro ao atribuir rota.','danger');}
+}
+
 function salvarEscala(){
   showToast('Escala salva!','success');
   renderEscala();
@@ -1874,7 +1964,8 @@ function renderPrevisaoRota(){
       } else {
         content=`<span style="color:#ccc;font-size:.8rem">—</span>`;
       }
-      dias+=`<div class="prev-cell${isToday?' today':''}" style="flex-direction:column;align-items:flex-start;gap:2px">${content}</div>`;
+      const clicavel=`onclick="openAtribRota(${r.id},'${d}')" style="cursor:pointer" title="Clique para escalar"`;
+      dias+=`<div class="prev-cell${isToday?' today':''}" ${clicavel} style="flex-direction:column;align-items:flex-start;gap:2px">${content}</div>`;
     });
   });
   dias+=`</div></div>`;
