@@ -182,7 +182,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 
 /* ══ BOTTOM NAV mobile ══ */
 .bottom-nav{display:none}
-.bnav-hidden{transform:translateY(100%);transition:transform .25s ease}
+.bnav-hidden{transform:translateY(calc(100% + env(safe-area-inset-bottom)));transition:transform .18s ease}
 @media(max-width:700px){
 .prev-mot-sub{display:none}
 .prev-grupo-sep{font-size:.6rem !important;padding:1px 6px !important}
@@ -563,6 +563,9 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
       </select>
     </div>
   </div>
+  <div class="form-row">
+    <div class="fg"><label>Ordem na Previsão</label><input type="number" id="rot-ordem" min="1" max="99" placeholder="Ex: 1, 2, 3..." style="width:100%"></div>
+  </div>
   <div class="mf">
     <button class="btn btn-g" onclick="closeModal('modal-rota')">Cancelar</button>
     <button class="btn btn-p" onclick="saveRota()">Salvar</button>
@@ -775,7 +778,7 @@ function goPage(p,btn,source){
   // Sync bottom nav
   document.querySelectorAll('.bnav-btn').forEach(x=>x.classList.remove('active'));
   const bn=document.getElementById('bnav-'+p); if(bn) bn.classList.add('active');
-  if(window._bnavShow){window._bnavShow();window._bnavScheduleHide();}
+  if(_bnavShow){_bnavShow();_bnavScheduleHide();}
 
   if(p==='dashboard')renderDashboard();
   if(p==='escala'){if(!document.getElementById('escala-date').value)document.getElementById('escala-date').value=today();renderEscala();}
@@ -807,12 +810,14 @@ function openModal(id){
   document.getElementById(id).classList.add('open');
 }
 function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('open');}
+let _bnavShow=null;
+let _bnavScheduleHide=null;
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg){bg.classList.remove('open','center');if(bg.id==='modal-senha'){_senhaCallback=null;}}}));
   // E13 — bottom-nav auto-hide por inatividade
   let _bnavTimer=null;
   const _bnav=document.querySelector('.bottom-nav');
-  function _bnavShow(){if(_bnav)_bnav.classList.remove('bnav-hidden');}
-  function _bnavScheduleHide(){
+  _bnavShow=function(){if(_bnav)_bnav.classList.remove('bnav-hidden');};
+  _bnavScheduleHide=function(){
     clearTimeout(_bnavTimer);
     _bnavTimer=setTimeout(()=>{
       if(!_bnav)return;
@@ -820,9 +825,8 @@ document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.mo
       if(document.querySelector('.modal-bg.open'))return;
       if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName?.toUpperCase()))return;
       _bnav.classList.add('bnav-hidden');
-    },1000);
-  }
-  window._bnavShow=_bnavShow;window._bnavScheduleHide=_bnavScheduleHide;
+    },300);
+  };
   ['scroll','touchstart','touchmove','mousedown'].forEach(ev=>window.addEventListener(ev,()=>{_bnavShow();_bnavScheduleHide();},{passive:true}));
   document.addEventListener('focusin',()=>{_bnavShow();clearTimeout(_bnavTimer);});
   document.addEventListener('focusout',()=>{_bnavScheduleHide();});
@@ -1778,7 +1782,7 @@ function renderPrevisaoRota(){
     return 1;
   }
 
-  const rotasOrdenadas=todasRotas;
+  const rotasOrdenadas=[...todasRotas].sort((a,b)=>(a.ordem??99)-(b.ordem??99));
 
   const colW=`auto ${days.map(()=>'auto').join(' ')}`;
   let html=`<div style="display:grid;grid-template-columns:${colW}">`;
@@ -2093,6 +2097,7 @@ async function editRot(id){
   document.getElementById('rot-grupo').value=r.grupo||r.tipo_rota||'colaborador';
   document.getElementById('rot-ultima').value=r.ultima||'';
   document.getElementById('rot-ativa').value=r.ativa;
+  if(document.getElementById('rot-ordem'))document.getElementById('rot-ordem').value=r.ordem||'';
   preencherMotFixoSelect(r.motorista_fixo||null);
   document.getElementById('mr-title').textContent='Editar Rota';
   openModal('modal-rota');
@@ -2100,7 +2105,8 @@ async function editRot(id){
 async function saveRota(){
   const id=document.getElementById('rot-id').value;
   const list=DB.get('rotas');
-  const obj={nome:document.getElementById('rot-nome').value.trim(),intervalo:parseInt(document.getElementById('rot-intervalo').value),duracao:parseInt(document.getElementById('rot-duracao').value)||1,grupo:document.getElementById('rot-grupo').value||'colaborador',motorista_fixo:parseInt(document.getElementById('rot-mot-fixo').value)||null,ultima:document.getElementById('rot-ultima').value||null,ativa:parseInt(document.getElementById('rot-ativa').value)};
+  const _ordemVal=document.getElementById('rot-ordem').value.trim();
+  const obj={nome:document.getElementById('rot-nome').value.trim(),intervalo:parseInt(document.getElementById('rot-intervalo').value),duracao:parseInt(document.getElementById('rot-duracao').value)||1,grupo:document.getElementById('rot-grupo').value||'colaborador',motorista_fixo:parseInt(document.getElementById('rot-mot-fixo').value)||null,ultima:document.getElementById('rot-ultima').value||null,ativa:parseInt(document.getElementById('rot-ativa').value),ordem:_ordemVal===''?null:parseInt(_ordemVal,10)};
   if(!obj.nome){alert('Informe o nome.');return;}
   try{
     if(id){const i=list.findIndex(x=>x.id==id);if(i>=0)list[i]={...list[i],...obj};await syncRota(list.find(x=>x.id==id),false);}
@@ -2424,7 +2430,7 @@ async function importarDados(input){
 
       // 4. Inserir rotas
       if(dados.rotas?.length){
-        const rowsRotas=dados.rotas.map(r=>({id:r.id,nome:r.nome,intervalo:r.intervalo||1,duracao:r.duracao||1,grupo:r.grupo||'colaborador',motorista_fixo:r.motorista_fixo||null,ativa:r.ativa??1,ultima:r.ultima||null}));
+        const rowsRotas=dados.rotas.map(r=>({id:r.id,nome:r.nome,intervalo:r.intervalo||1,duracao:r.duracao||1,grupo:r.grupo||'colaborador',motorista_fixo:r.motorista_fixo||null,ativa:r.ativa??1,ultima:r.ultima||null,ordem:r.ordem??null}));
         await supa('rotas','POST',rowsRotas);
       }
 
@@ -2522,7 +2528,7 @@ async function carregarDados(){
       manutLevouId:v.manut_levou_id||null,
       manutTrouxeId:v.manut_trouxe_id||null,
     }))]);
-    DB.set('rotas', rotas.map(r=>({...r,grupo:r.grupo||r.tipo_rota||'colaborador'})));
+    DB.set('rotas', rotas.map(r=>({...r,grupo:r.grupo||r.tipo_rota||'colaborador',ordem:r.ordem??null})));
     DB.set('produtores', produtores);
     const motsCached=DB.get('motoristas'); // já normalizado acima
     DB.set('escalas', escalas.map(e=>{
@@ -2601,7 +2607,7 @@ async function syncVeiculo(v, isNew){
 async function deleteVeiculo(id){ await supa('veiculos','DELETE',null,`?id=eq.${id}`); }
 
 async function syncRota(r, isNew){
-  const payload={nome:r.nome,intervalo:r.intervalo,duracao:r.duracao||1,grupo:r.grupo||'colaborador',motorista_fixo:r.motorista_fixo||null,ativa:r.ativa,ultima:r.ultima||null};
+  const payload={nome:r.nome,intervalo:r.intervalo,duracao:r.duracao||1,grupo:r.grupo||'colaborador',motorista_fixo:r.motorista_fixo||null,ativa:r.ativa,ultima:r.ultima||null,ordem:r.ordem??null};
   if(isNew){ const res=await supa('rotas','POST',payload); return res?res[0]:null; }
   else { await supa('rotas','PATCH',payload,`?id=eq.${r.id}`); return r; }
 }
