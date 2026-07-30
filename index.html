@@ -473,7 +473,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
     <div class="fg"><label>Apelido <span style="color:var(--amber);font-size:.75rem">(aparece na escala)</span></label><input type="text" id="mot-apelido" placeholder="Ex: Zé, Tatá, João..."></div>
   </div>
   <div class="form-row">
-    <div class="fg"><label>Tipo</label><select id="mot-tipo"><option value="Colaborador">Colaborador</option><option value="Agregado">Agregado</option></select></div>
+    <div class="fg"><label>Tipo</label><select id="mot-tipo"><option value="Colaborador">Colaborador</option><option value="Agregado">Agregado</option><option value="Apoio">Apoio / Manutenção</option></select></div>
     <div class="fg"><label>CNH <span style="color:var(--purple);font-size:.73rem">E = pode dirigir Julieta</span></label>
       <select id="mot-cnh">
         <option value="D">D — Caminhão simples</option>
@@ -736,7 +736,7 @@ function temBloqueioData(mId,dt){
   });
 }
 function motDisp(dt){
-  return DB.get('motoristas').filter(m=>m.status==='Ativo'&&!temBloqueioData(m.id,dt));
+  return DB.get('motoristas').filter(m=>m.status==='Ativo'&&m.tipo!=='Apoio'&&!temBloqueioData(m.id,dt));
 }
 function motIndisponivel(mId,dt){
   const m=DB.get('motoristas').find(x=>x.id===mId);
@@ -999,7 +999,7 @@ function renderDashboard(){
   const naoEsc=rotasHoje.filter(r=>!rotasEsc.has(r.id));
   let al='', al2='';
   // Alertas de jornada
-  const colabs=mots.filter(m=>m.tipo!=='Agregado'&&m.status==='Ativo');
+  const colabs=mots.filter(m=>m.tipo!=='Agregado'&&m.tipo!=='Apoio'&&m.status==='Ativo');
   colabs.forEach(m=>{
     const al=alertaJornada(m.id,dt);
     if(al&&al.nivel==='critico') al2+=`<div class="alert w" style="border-left-color:var(--red)">🔴 <b>${nomeV(m)}</b>: ${al.msg}</div>`;
@@ -1763,7 +1763,7 @@ function renderPrevisaoMotorista(){
 
   // Dois grupos: Colaboradores / Agregados
   const gruposMotorista=[
-    {label:'🔵 Colaboradores', cor:'var(--navy)', bg:'#e8eef2', mots:todosMotsAtivos.filter(m=>m.tipo!=='Agregado').sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'))},
+    {label:'🔵 Colaboradores', cor:'var(--navy)', bg:'#e8eef2', mots:todosMotsAtivos.filter(m=>m.tipo!=='Agregado'&&m.tipo!=='Apoio').sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'))},
     {label:'🟡 Agregados',     cor:'#7B3F9E',    bg:'#f3e8fa', mots:todosMotsAtivos.filter(m=>m.tipo==='Agregado').sort((a,b)=>nomeV(a).localeCompare(nomeV(b),'pt-BR'))},
   ];
 
@@ -1997,7 +1997,7 @@ function renderCadastros(){renderMotoristas();}
 // Nome visível na escala: apelido se existir, senão primeiro nome
 function nomeV(m){ return (m.apelido&&m.apelido.trim())?m.apelido.trim():m.nome.split(' ')[0]; }
 // Tipo normalizado para exibição
-function tipoV(m){ return (m.tipo==='Próprio'||m.tipo==='Colaborador')?'Colaborador':'Agregado'; }
+function tipoV(m){ return (m.tipo==='Próprio'||m.tipo==='Colaborador')?'Colaborador':m.tipo==='Apoio'?'Apoio':'Agregado'; }
 // Badge HTML de tipo
 function tipoBadge(m){ return tipoV(m)==='Colaborador'?'<span class="b bn">Colaborador</span>':'<span class="b bz">Agregado</span>'; }
 // Badge HTML de status
