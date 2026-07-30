@@ -43,7 +43,8 @@ header{background:var(--navy);color:#fff;display:flex;align-items:center;justify
 .nav-tab.active{color:#fff;background:var(--amber)}
 
 /* LAYOUT */
-main{flex:1;max-width:1380px;width:100%;margin:0 auto;padding:16px 14px;padding-left:calc(14px + var(--safe-left));padding-right:calc(14px + var(--safe-right))}
+main{flex:1;max-width:1380px;width:100%;margin:0 auto;padding:16px 14px;padding-left:calc(14px + var(--safe-left));padding-right:calc(14px + var(--safe-right));transition:padding-bottom .18s ease}
+.main-bnav-hidden{padding-bottom:calc(8px + var(--safe-bottom)) !important}
 section.page{display:none}
 section.page.active{display:block}
 
@@ -816,7 +817,8 @@ document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.mo
   // E13 — bottom-nav auto-hide por inatividade
   let _bnavTimer=null;
   const _bnav=document.querySelector('.bottom-nav');
-  _bnavShow=function(){if(_bnav)_bnav.classList.remove('bnav-hidden');};
+  const _main=document.querySelector('main');
+  _bnavShow=function(){if(_bnav)_bnav.classList.remove('bnav-hidden');if(_main)_main.classList.remove('main-bnav-hidden');};
   _bnavScheduleHide=function(){
     clearTimeout(_bnavTimer);
     _bnavTimer=setTimeout(()=>{
@@ -824,7 +826,7 @@ document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.mo
       if(window.scrollY<=50)return;
       if(document.querySelector('.modal-bg.open'))return;
       if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName?.toUpperCase()))return;
-      _bnav.classList.add('bnav-hidden');
+      _bnav.classList.add('bnav-hidden');if(_main)_main.classList.add('main-bnav-hidden');
     },300);
   };
   ['scroll','touchstart','touchmove','mousedown'].forEach(ev=>window.addEventListener(ev,()=>{_bnavShow();_bnavScheduleHide();},{passive:true}));
