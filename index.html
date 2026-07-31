@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#1b3a4b">
+<meta name="color-scheme" content="light">
 <link rel="manifest" href="manifest.json">
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -258,9 +259,6 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
       <span id="conn-dot" style="width:8px;height:8px;border-radius:50%;background:#888;display:inline-block"></span>
       <span id="conn-txt" class="hdr-date">...</span>
     </span>
-    <button onclick="exportarDados()" class="hdr-btn">⬇️ Exportar</button>
-    <button onclick="document.getElementById('import-input').click()" class="hdr-btn">⬆️ Importar</button>
-    <input type="file" id="import-input" accept=".json" style="display:none" onchange="importarDados(this)">
     <div class="hdr-date">📅 <b id="hdr-date"></b></div>
   </div>
 </header>
@@ -288,6 +286,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 
 <!-- ═══════ DASHBOARD ═══════ -->
 <section class="page active" id="page-dashboard">
+  <div id="dash-data-label" style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px"></div>
   <div id="dash-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:20px"></div>
 
   <!-- DISPONÍVEIS PARA EMERGÊNCIA -->
@@ -435,7 +434,12 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
       <button class="sub-tab"        onclick="cadTab('produtores',this)">Produtores</button>
       <button class="sub-tab"        onclick="cadTab('folgas',this)">Folgas/Férias</button>
     </div>
-    <button onclick="abrirAlterarSenha()" style="background:none;border:none;cursor:pointer;padding:8px 12px;font-size:.78rem;color:var(--muted);display:flex;align-items:center;gap:4px;margin-bottom:0;align-self:flex-end">🔑 Alterar Senha</button>
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+      <button class="btn btn-g btn-sm" onclick="pedirSenha(()=>exportarDados(),'Exportar Backup')">⬇️ Exportar</button>
+      <button class="btn btn-g btn-sm" onclick="pedirSenha(()=>document.getElementById('import-input').click(),'Importar Backup')">⬆️ Importar</button>
+      <input type="file" id="import-input" accept=".json" style="display:none" onchange="importarDados(this)">
+      <button onclick="abrirAlterarSenha()" style="background:none;border:none;cursor:pointer;padding:8px 12px;font-size:.78rem;color:var(--muted);display:flex;align-items:center;gap:4px;margin-bottom:0;align-self:flex-end">🔑 Alterar Senha</button>
+    </div>
   </div>
   <div id="cad-motoristas"></div>
   <div id="cad-veiculos"   style="display:none"></div>
@@ -463,6 +467,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--navy-l);box-shadow:0 
 </section>
 
 </main>
+<footer style="text-align:center;padding:12px;font-size:.68rem;color:var(--muted);border-top:1px solid var(--border);margin-top:8px">© 2026 EscalaOP · v30.07</footer>
 
 <!-- ══════════ MODAIS ══════════ -->
 
@@ -709,7 +714,7 @@ const DB={
 };
 
 // ══════════ UTILS ══════════
-function today(){return new Date().toISOString().slice(0,10)}
+function today(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function daysAgo(n){const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10)}
 function daysFromNow(n){const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
 function fmtDate(s){if(!s)return '—';const[y,m,d]=s.split('-');return`${d}/${m}/${y}`}
@@ -836,6 +841,15 @@ function openModal(id){
 }
 function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('open');}
 let _bnavShow=null;
+// Verificação automática de virada de dia
+let _lastDay=today();
+setInterval(()=>{
+  const now=today();
+  if(now!==_lastDay){
+    _lastDay=now;
+    carregarDados();
+  }
+},60000);
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg){bg.classList.remove('open','center');if(bg.id==='modal-senha'){_senhaCallback=null;}}}));
   // E13 — bottom-nav: ocultar ao rolar para baixo, mostrar ao rolar para cima
   const _bnav=document.querySelector('.bottom-nav');
@@ -857,6 +871,11 @@ document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.mo
 // ══════════ DASHBOARD ══════════
 function renderDashboard(){
   const dt=today();
+  // Atualizar label de data do Dashboard
+  const dow=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  const dtObj=new Date(dt+'T12:00:00');
+  const lbl=document.getElementById('dash-data-label');
+  if(lbl) lbl.textContent=`📆 ${dow[dtObj.getDay()]}, ${fmtDate(dt)}`;
   const mots=DB.get('motoristas');
   const disp=motDisp(dt);
   const rotasHoje=rotasParaDt(dt);
