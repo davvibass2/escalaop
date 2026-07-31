@@ -1986,7 +1986,7 @@ function renderPrevisaoRota(){
       } else {
         content=`<span style="color:#ccc;font-size:.8rem">—</span>`;
       }
-      const clicavel=`onclick="openAtribRota(${r.id},'${d}')" style="cursor:pointer" title="Clique para escalar"`;
+      const clicavel=`onclick="pedirSenha(()=>openAtribRota(${r.id},'${d}'),'Atribuir Rota')" style="cursor:pointer" title="Clique para escalar"`;
       dias+=`<div class="prev-cell${isToday?' today':''}" ${clicavel} style="flex-direction:column;align-items:flex-start;gap:2px">${content}</div>`;
     });
   });
@@ -2848,6 +2848,7 @@ function precisaSenha(pagina){
 }
 
 function pedirSenha(callback, titulo='Área Restrita'){
+  if(_sessaoDesbloqueada){if(callback)callback();return;}
   _senhaCallback = callback;
   document.getElementById('senha-titulo').textContent = titulo;
   document.getElementById('senha-input').value = '';
