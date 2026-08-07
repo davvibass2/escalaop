@@ -1470,6 +1470,8 @@ async function confirmarAtrib(){
   const _rv=document.getElementById('atrib-vei').value; const veiId=(_rv===''||_rv===null)?null:parseInt(_rv);
   const dt=_atribDt||today();
   if(!rotaId){alert('Selecione uma rota.');return;}
+  const _btnCA=document.querySelector('#modal-atrib .btn-p');
+  if(_btnCA)_btnCA.disabled=true;
   try{
     const novaEsc={data:dt,rota_id:rotaId,motorista_id:motId,veiculo_id:veiId,papel:'rota'};
     const created=await syncEscala(novaEsc,true);
@@ -1484,6 +1486,7 @@ async function confirmarAtrib(){
     renderEscala();
     showToast('Rota atribuída!','success');
   }catch(e){showToast('Erro ao atribuir rota.','danger');}
+  finally{if(_btnCA)_btnCA.disabled=false;}
 }
 
 function openAtribRota(rotaId, data){
@@ -1546,6 +1549,8 @@ async function confirmarAtribRota(){
   const veiId=(_rv===''||_rv===null)?null:parseInt(_rv);
   if(!motId){alert('Selecione um motorista.');return;}
   if(precisaFolga(motId,data)){alert('Folga obrigatória — não é possível escalar este motorista.');return;}
+  const _btnCAR=document.querySelector('#modal-atrib-rota .btn-p');
+  if(_btnCAR)_btnCAR.disabled=true;
   try{
     const novaEsc={data,rota_id:rotaId,motorista_id:motId,veiculo_id:veiId,papel:'rota'};
     const created=await syncEscala(novaEsc,true);
@@ -1559,6 +1564,7 @@ async function confirmarAtribRota(){
     renderPrevisaoRota();
     showToast('Rota atribuída!','success');
   }catch(e){showToast('Erro ao atribuir rota.','danger');}
+  finally{if(_btnCAR)_btnCAR.disabled=false;}
 }
 
 function salvarEscala(){
@@ -1693,7 +1699,8 @@ async function gerarEscalaAuto(){
   
   if(!rotasHoje.length){showToast('Nenhuma rota cadastrada.','warn');return;}
   if(!disp.length){showToast('Nenhum motorista disponível.','warn');return;}
-
+  const _btnGA=document.querySelector('.gerar-btn');
+  if(_btnGA)_btnGA.disabled=true;
   const escalas=DB.get('escalas');
   const recente=daysAgo(30);
   const diasTrab={};
@@ -1745,6 +1752,7 @@ async function gerarEscalaAuto(){
     renderEscala();
     showToast(`Escala gerada: ${escaladas} de ${rotasOrd.length} rotas atribuídas. Revise e confirme.`,'info');
   }catch(e){showToast('Erro ao gerar escala: '+e.message,'danger');console.error(e);}
+  finally{if(_btnGA)_btnGA.disabled=false;}
 }
 
 // ══════════ PREVISÃO ══════════
