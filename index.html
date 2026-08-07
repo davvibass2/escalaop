@@ -1143,7 +1143,9 @@ async function escalaRotaChangeMot(rotaId, motId, dt, escId){
       await supa('escalas','PATCH',{motorista_id:motIdInt},`?id=eq.${escId}`);
       DB.set('escalas',escalas);
     } else if(motIdInt){
-      // Criar novo
+      // Criar novo — verificar se já existe antes do POST
+      const _jaExisteERM=DB.get('escalas').find(e=>e.data===dt&&e.rota_id===rotaId&&e.motorista_id===motIdInt&&e.papel==='rota');
+      if(_jaExisteERM){showToast('Esta escala já existe para este motorista nesta rota.','warn');return;}
       const nova={data:dt,rota_id:rotaId,motorista_id:motIdInt,veiculo_id:null,papel:'rota'};
       const created=await syncEscala(nova,true);
       if(created){
@@ -1472,6 +1474,8 @@ async function confirmarAtrib(){
   if(!rotaId){alert('Selecione uma rota.');return;}
   const _btnCA=document.querySelector('#modal-atrib .btn-p');
   if(_btnCA)_btnCA.disabled=true;
+  const _jaExisteCA=DB.get('escalas').find(e=>e.data===dt&&e.rota_id===rotaId&&e.motorista_id===motId&&e.papel==='rota');
+  if(_jaExisteCA){showToast('Esta escala já existe para este motorista nesta rota.','warn');if(_btnCA)_btnCA.disabled=false;return;}
   try{
     const novaEsc={data:dt,rota_id:rotaId,motorista_id:motId,veiculo_id:veiId,papel:'rota'};
     const created=await syncEscala(novaEsc,true);
@@ -1551,6 +1555,8 @@ async function confirmarAtribRota(){
   if(precisaFolga(motId,data)){alert('Folga obrigatória — não é possível escalar este motorista.');return;}
   const _btnCAR=document.querySelector('#modal-atrib-rota .btn-p');
   if(_btnCAR)_btnCAR.disabled=true;
+  const _jaExisteCAR=DB.get('escalas').find(e=>e.data===data&&e.rota_id===rotaId&&e.motorista_id===motId&&e.papel==='rota');
+  if(_jaExisteCAR){showToast('Esta escala já existe para este motorista nesta rota.','warn');if(_btnCAR)_btnCAR.disabled=false;return;}
   try{
     const novaEsc={data,rota_id:rotaId,motorista_id:motId,veiculo_id:veiId,papel:'rota'};
     const created=await syncEscala(novaEsc,true);
