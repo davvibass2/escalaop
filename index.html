@@ -704,6 +704,23 @@ async function supa(table, method='GET', body=null, extra=''){
   const text=await res.text();
   return text ? JSON.parse(text) : null;
 }
+ 
+// Busca todas as escalas em páginas para não parar no limite de 1.000 linhas do Supabase.
+async function carregarTodasEscalas(){
+  const todas=[];
+  let ultimoId=0;
+  while(true){
+    const pagina=await supa('escalas','GET',null,`?id=gt.${ultimoId}&order=id.asc&limit=500`);
+    if(!pagina||pagina.length===0) break;
+    todas.push(...pagina);
+    const proximoId=pagina[pagina.length-1].id;
+    if(!Number.isFinite(Number(proximoId))||Number(proximoId)<=ultimoId){
+      throw new Error('A paginação das escalas não avançou.');
+    }
+    ultimoId=Number(proximoId);
+  }
+  return todas;
+}
 
 // Cache local para performance (espelha dados do Supabase)
 const CACHE={};
@@ -2659,12 +2676,13 @@ async function carregarDados(){
       supa('veiculos','GET',null,'?order=frota'),
       supa('rotas','GET',null,'?order=nome'),
       supa('produtores','GET',null,'?order=id'),
-      supa('escalas','GET',null,'?order=id'),
+      carregarTodasEscalas(),
       supa('folgas','GET',null,'?order=id'),
       supa('rota_prod','GET',null,'?select=rota_id,prod_id'),
     ]);
     const [r0,r1,r2,r3,r4,r5,r6] = resultados;
     if(r0.status==='rejected') throw new Error('Falha ao carregar motoristas: '+r0.reason);
+    if(r4.status==='rejected') throw new Error('Falha ao carregar escalas: '+r4.reason);
     const motoristas = r0.value||[];
     const veiculos   = r1.status==='fulfilled'?(r1.value||[]):[];
     const rotas      = r2.status==='fulfilled'?(r2.value||[]):[];
@@ -2723,7 +2741,7 @@ async function carregarDados(){
     const isFileProtocol = location.protocol === 'file:';
     const msg = isFileProtocol
       ? 'Abra o arquivo em um servidor web, não direto do computador. Use o Chrome e arraste o arquivo para uma aba, ou use a extensão "Live Server" no VS Code.'
-      : 'Erro ao conectar ao Supabase. Verifique sua conexão com a internet.';
+      : 'Não foi possível carregar os dados da escala. Verifique sua conexão e tente novamente.';
     // Mostrar erro na tela em vez de só toast
     // loading-overlay é criado dinamicamente pelo showLoading
     document.querySelector('main').innerHTML=`
